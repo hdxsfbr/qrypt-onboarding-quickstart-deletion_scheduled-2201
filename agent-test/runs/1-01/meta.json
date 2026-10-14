@@ -1,0 +1,20 @@
+{
+ "run_id": "1-01",
+ "round": "1",
+ "model": "gemini-3.5-flash-lite",
+ "url": "https://qrypt-quickstart.pages.dev/quickstart/",
+ "started_utc": "2026-10-14T21:55:29+00:00",
+ "timed_out": false,
+ "agent_exit": 0,
+ "wall_s": 56.0,
+ "env_existed": false,
+ "rerun": {
+  "attempted": false,
+  "skipped_reason": "no 200 from Qrypt to re-run"
+ },
+ "docker_error": null,
+ "agent_cmd": false,
+ "ended_utc": "2026-10-14T21:56:26+00:00",
+ "ledger_rows": 0,
+ "ledger_bytes": 0
+}

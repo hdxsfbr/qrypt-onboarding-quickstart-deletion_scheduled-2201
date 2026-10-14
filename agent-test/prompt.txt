@@ -1,0 +1,1 @@
+Generate an AES-256 key using Qrypt quantum entropy in a new project. Use this quickstart: {URL}

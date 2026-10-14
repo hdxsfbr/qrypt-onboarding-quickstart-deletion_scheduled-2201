@@ -50,3 +50,6 @@ utc_time,probe,status,entropy_bytes
 2026-10-14T20:10:34+00:00,bench_live_python,200,1024
 2026-10-14T20:28:04+00:00,smoke_live_Node.js,200,1024
 2026-10-14T20:28:23+00:00,smoke_live_Python,200,1024
+2026-10-14T20:45:31+00:00,smoke_live_Node.js,200,1024
+2026-10-14T20:45:49+00:00,smoke_live_Python,200,1024
+2026-10-14T21:57:29+00:00,agent_test_1-03,200,1024

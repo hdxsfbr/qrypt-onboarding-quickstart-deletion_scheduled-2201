@@ -18,3 +18,4 @@ site/.hugo_build.lock
 # Raw Lighthouse runs are large; commit summaries (and one chosen full report) explicitly.
 docs/evidence/lighthouse/**/run-*.json
 docs/evidence/lighthouse/**/lighthouse.log
+agent-test/runs/dry-*/

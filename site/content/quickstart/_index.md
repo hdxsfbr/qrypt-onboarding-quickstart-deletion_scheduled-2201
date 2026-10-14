@@ -9,6 +9,14 @@ Get a working AES-256 key from Qrypt's quantum entropy service with one short sc
 
 You need a Qrypt account and either Node.js 20.12 or newer, or Python 3.10 or newer.
 
+{{% qs-note kind="warning" title="Using an AI coding agent? Give it these rules" %}}
+- **Use the key you were given.** If `QRYPT_API_KEY` is already set in the environment, write it into `.env` without printing it: `printf 'QRYPT_API_KEY=%s\n' "$QRYPT_API_KEY" > .env`. Otherwise ask the user for a key.
+- **Run the downloaded script as-is, once,** from the folder that holds `.env`. The task is done only when it prints the success line in step 6. A project that was never run against Qrypt is not done.
+- **Never substitute local randomness** (`os.urandom`, `crypto.randomBytes`, mocks or a "simulation mode") for Qrypt entropy. If the script prints a `✘` line, stop and report that line.
+- **Never print the key,** not even in your final summary. The success line is the proof.
+- **One request at a time.** Wait about 15 seconds before running the script again.
+{{% /qs-note %}}
+
 ## 1. Get a key {#get-a-key}
 
 1. Sign in to the Qrypt portal at [portal.qrypt.com](https://portal.qrypt.com).
