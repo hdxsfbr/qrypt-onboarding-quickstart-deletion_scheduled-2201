@@ -16,7 +16,7 @@
   </div>
   {{- range $i, $t := . }}
   {{- $slug := anchorize $t.name }}
-  <div role="tabpanel" class="qs-panel" id="qs-{{ $id }}-panel-{{ $slug }}" aria-labelledby="qs-{{ $id }}-tab-{{ $slug }}">
+  <div role="tabpanel" class="qs-panel" tabindex="0" id="qs-{{ $id }}-panel-{{ $slug }}" aria-labelledby="qs-{{ $id }}-tab-{{ $slug }}">
     <h3 class="qs-tab-heading">{{ $t.name }}</h3>
     {{ $t.body }}
   </div>

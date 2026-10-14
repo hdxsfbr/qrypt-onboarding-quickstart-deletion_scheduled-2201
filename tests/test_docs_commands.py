@@ -34,6 +34,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 import extract_commands  # noqa: E402
 
 PAGE = REPO / "site" / "content" / "quickstart" / "_index.md"
+TROUBLESHOOTING = REPO / "site" / "content" / "quickstart" / "troubleshooting.md"
 FIXTURE_PAGE = Path(__file__).parent / "fixtures" / "qs_page.md"
 LIVE_BASE = "https://qrypt-quickstart.pages.dev/"
 SUCCESS = "✔ Generated a 256-bit AES key from Qrypt quantum entropy (AES-GCM round trip OK)."
@@ -138,6 +139,57 @@ def test_t_d_1_documented_commands_run(path, mock, tmp_path_factory):
     assert request["path"] == "/s/ok/api/v1/quantum-entropy" and request["status"] == 200
     assert request["headers"]["user-agent"] == USER_AGENT[path]
     assert request["headers"]["authorization"] == "Bearer <redacted>"
+
+
+# --- every shell-like fence is annotated (F6) -----------------------------------------------
+
+SHELL_LANGS = {"sh", "bash", "shell", "powershell"}
+TEST_VALUES = {"true", "pwsh", "no"}
+
+
+def shell_fence_problems(text):
+    """One message per shell-like fence (sh, bash, shell, powershell) whose `test` attribute is
+    missing or not one of true, pwsh, no. Fences inside another fence are content."""
+    problems, fence = [], None
+    for number, line in enumerate(text.splitlines(), 1):
+        if fence:
+            stripped = line.strip()
+            if stripped and set(stripped) == {fence[0]} and len(stripped) >= fence[1]:
+                fence = None
+            continue
+        opened = extract_commands.FENCE_OPEN.match(line)
+        if opened and not (opened.group(2)[0] == "`" and "`" in opened.group(3)):
+            fence = (opened.group(2)[0], len(opened.group(2)))
+            lang, attrs = extract_commands.parse_info(opened.group(3))
+            if lang.lower() in SHELL_LANGS and attrs.get("test") not in TEST_VALUES:
+                problems.append(f"line {number}: ```{lang} fence needs test=\"true\", "
+                                f"test=\"pwsh\" or test=\"no\" (found {attrs.get('test')!r})")
+    return problems
+
+
+@pytest.mark.parametrize("page", [PAGE, TROUBLESHOOTING], ids=lambda p: p.stem)
+def test_t_d_2_every_shell_fence_declares_whether_it_is_tested(page):
+    """T-d-2 (W14, F6): no shell-like fence on either quickstart page is silently untested.
+    Placeholder commands (proxy, CA, diagnostics) say so with test="no"."""
+    assert shell_fence_problems(page.read_text(encoding="utf-8")) == []
+
+
+def test_t_d_2_the_check_catches_unannotated_shell_fences():
+    """Negative fixtures: a missing attribute, a wrong value and every shell-like language are
+    reported; text, other languages, nested fences and the three valid values are not."""
+    page = "\n".join([
+        "```sh", "a", "```",                          # 1: missing
+        "```bash {linenos=false}", "b", "```",       # 4: some attribute, but not test
+        '```shell {test="maybe"}', "c", "```",       # 7: wrong value
+        "```powershell", "d", "```",                 # 10: missing
+        '```sh {test="true"}', "ok", "```",
+        '```powershell {test="pwsh"}', "ok", "```",
+        '```sh {test="no"}', "ok", "```",
+        "```text", "not a shell", "```",
+        "````md", "```sh", "inside another fence", "```", "````",
+    ])
+    assert [p.split(":")[0] for p in shell_fence_problems(page)] == \
+        ["line 1", "line 4", "line 7", "line 10"]
 
 
 # --- extract_commands.py -----------------------------------------------------------------

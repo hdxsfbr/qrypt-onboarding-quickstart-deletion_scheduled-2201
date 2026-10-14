@@ -217,6 +217,13 @@ HUGO_COUNTER = re.compile(r"hahahugoshortcode\d+s\d+hbhb")
 
 
 class _Tokens(HTMLParser):
+    """Start tags (with sorted attributes), end tags and text, with every character of the
+    text kept exactly: inside <pre>, <code>, <script> and <style> whitespace is content, and
+    elsewhere the two builds turned out to need no normalization either (the only allowed
+    differences are the cache-busting ?digits, the Hugo shortcode counter and the added
+    Quickstart menu item, all handled before or after tokenizing). Adjacent text chunks are
+    merged so that the parser's chunking cannot matter."""
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.tokens = []
@@ -231,8 +238,9 @@ class _Tokens(HTMLParser):
         self.tokens.append(("e", tag))
 
     def handle_data(self, data):
-        data = squash(data)
-        if data:
+        if self.tokens and self.tokens[-1][0] == "d":
+            self.tokens[-1] = ("d", self.tokens[-1][1] + data)
+        else:
             self.tokens.append(("d", data))
 
     def handle_comment(self, data):
@@ -402,19 +410,28 @@ def check_tabs(public):
         assert [t.attrs.get("aria-selected") for t in tabs].count("true") == 1, \
             "exactly one tab must have aria-selected=true"
         for tab in tabs:
+            tab_id = tab.attrs.get("id")
+            assert tab_id and len(ids.get(tab_id, [])) == 1, f"a tab needs a unique id: {tab}"
             selected = tab.attrs.get("aria-selected")
             assert selected in ("true", "false"), f"aria-selected={selected!r} on {tab}"
             assert tab.attrs.get("tabindex") == ("0" if selected == "true" else "-1"), \
                 f"roving tabindex: {tab}"
             target = tab.attrs.get("aria-controls")
             assert target in ids, f"aria-controls={target!r} matches no element id"
+            assert len(ids[target]) == 1, f"id {target!r} is not unique"
             panel = ids[target][0]
             assert panel.attrs.get("role") == "tabpanel", f"#{target} is not role=tabpanel"
+            assert panel.attrs.get("aria-labelledby") == tab_id, \
+                f"#{target} has aria-labelledby={panel.attrs.get('aria-labelledby')!r}, which " \
+                f"does not point back to the tab that controls it (#{tab_id})"
+            assert target not in seen_panels, f"#{target} is controlled by two tabs"
             seen_panels.add(target)
     panels = find(page, role="tabpanel")
-    assert {p.attrs.get("id") for p in panels} == seen_panels, \
+    assert {p.attrs.get("id") for p in panels} == seen_panels and len(panels) == len(seen_panels), \
         "every role=tabpanel must be controlled by exactly one tab"
     for panel in panels:
+        assert panel.attrs.get("tabindex") == "0", \
+            f"#{panel.attrs['id']}: a tab panel must be keyboard focusable (tabindex=0)"
         # No-JS render (progressive enhancement): the served HTML hides nothing and each panel
         # carries a heading, so the two panels read as stacked sections.
         assert "hidden" not in panel.attrs, f"#{panel.attrs['id']} is hidden in the served HTML"
@@ -431,12 +448,64 @@ def check_tabs(public):
     script = "\n".join(inline_scripts(page))
     for needle in ("ArrowLeft", "ArrowRight", "Home", "End", "qs-lang", "localStorage", "try"):
         assert needle in script, f"the inline script never mentions {needle!r} (W7)"
+    # Without JavaScript the panels must all be shown: the page carries a <noscript> rule that
+    # sets display:block on the panels' class. (The rule is read, not emulated.)
+    shown = {c for rules in noscript_rules(page) for sel, body in rules
+             if re.search(r"display\s*:\s*block", body) for c in re.findall(r"\.([\w-]+)", sel)}
+    classes = {c for p in panels for c in p.attrs.get("class", "").split()}
+    assert classes & shown, \
+        f"no <noscript><style> rule shows the tab panels (classes {sorted(classes)}) with " \
+        f"display:block; noscript rules show {sorted(shown)}"
+
+
+def noscript_rules(page):
+    """[(selector, declarations), ...] for each <style> inside a <noscript>, as one list per
+    <style>."""
+    return [re.findall(r"([^{}]+)\{([^{}]*)\}", style.text(skip=()))
+            for ns in find(page, "noscript") for style in ns.walk() if style.tag == "style"]
+
+
+def check_menu_toggle(public):
+    """F5: the mobile menu toggle is a native button that names and tracks the sidebar."""
+    for rel in OUR_PAGES:
+        page = load(public, rel)
+        ids = ids_of(page)
+        toggles = find(page, id="sidebar-toggle")
+        assert len(toggles) == 1, f"{rel}: expected one #sidebar-toggle, found {len(toggles)}"
+        (toggle,) = toggles
+        assert toggle.tag == "button" and toggle.attrs.get("type") == "button", \
+            f"{rel}: the menu toggle must be a <button type=button>, not {toggle}"
+        assert toggle.attrs.get("aria-label", "").strip(), f"{rel}: the menu toggle has no aria-label"
+        target = toggle.attrs.get("aria-controls")
+        assert target and len(ids.get(target, [])) == 1, \
+            f"{rel}: aria-controls={target!r} must name exactly one element"
+        assert toggle.attrs.get("aria-expanded") == "false", \
+            f"{rel}: the menu starts collapsed: aria-expanded=false, found " \
+            f"{toggle.attrs.get('aria-expanded')!r}"
+        script = "\n".join(inline_scripts(page))
+        assert re.search(r"setAttribute\(\s*[\"']aria-expanded", script), \
+            f"{rel}: the inline script never updates aria-expanded"
 
 
 def check_script_budget(public):
+    """W3 and F9, on both pages: exactly one inline script, under 2 KB; no <script src>; no
+    external stylesheet; exactly one <style> (a <style> inside <noscript> is the no-JavaScript
+    fallback of F7 and is not counted)."""
     for rel in OUR_PAGES:
-        size = sum(len(s.encode()) for s in inline_scripts(load(public, rel)))
+        page = load(public, rel)
+        scripts = find(page, "script")
+        external = [s.attrs["src"] for s in scripts if s.attrs.get("src")]
+        assert not external, f"{rel}: external scripts are not allowed: {external}"
+        inline = inline_scripts(page)
+        assert len(inline) == 1, f"{rel}: expected exactly one inline <script>, found {len(inline)}"
+        size = len(inline[0].encode())
         assert size < INLINE_SCRIPT_BUDGET, f"{rel}: inline JS is {size} B, budget is < 2 KB (W3)"
+        sheets = [lk.attrs.get("href") for lk in find(page, "link")
+                  if "stylesheet" in lk.attrs.get("rel", "").lower().split()]
+        assert not sheets, f"{rel}: external stylesheets are not allowed: {sheets}"
+        styles = [n for n in find(page, "style")
+                  if not any(a.tag == "noscript" for a in n.ancestors())]
+        assert len(styles) == 1, f"{rel}: expected exactly one <style>, found {len(styles)}"
 
 
 # --- T-site-7 (W8) -----------------------------------------------------------------------
@@ -499,6 +568,40 @@ def style_of(node):
     return decls
 
 
+def own_background(node):
+    """The color of this element's own inline background-color or background, if it has one."""
+    decls = style_of(node)
+    for key in ("background-color", "background"):
+        for token in re.findall(r"#[0-9a-fA-F]{3,6}\b|rgb\([^)]*\)|\b[a-z]+\b", decls.get(key, "")):
+            color = parse_color(token)
+            if color:
+                return color
+    return None
+
+
+def effective_background(node, pre, block_bg):
+    """What a token is painted on: its own background, else the nearest wrapping span's inside
+    the block, else the block's."""
+    for item in [node, *node.ancestors()]:
+        if item is pre:
+            break
+        color = own_background(item)
+        if color:
+            return color
+    return block_bg
+
+
+def effective_color(node, pre):
+    """The inline foreground this element has or inherits inside the block (None: from CSS)."""
+    for item in [node, *node.ancestors()]:
+        value = style_of(item).get("color")
+        if value is not None:
+            return value
+        if item is pre:
+            break
+    return None
+
+
 def background_of(page, pre):
     """Inline background on the block or the nearest wrapper, else a plain stylesheet rule."""
     for node in [pre, *pre.ancestors()]:
@@ -526,15 +629,18 @@ def check_code_contrast(public):
             bg = background_of(page, pre)
             assert bg is not None, f"{rel}: cannot determine the code block background"
             for node in pre.walk():
-                value = style_of(node).get("color")
+                if "color" not in style_of(node) and own_background(node) is None:
+                    continue
+                value = effective_color(node, pre)
                 if value is None:
                     continue
                 fg = parse_color(value)
                 assert fg is not None, f"{rel}: cannot evaluate color {value!r} in a code block"
                 colored += 1
-                ratio = contrast(fg, bg)
+                token_bg = effective_background(node, pre, bg)
+                ratio = contrast(fg, token_bg)
                 assert ratio >= MIN_CONTRAST, \
-                    f"{rel}: token color {value} on background {bg} is {ratio:.2f}:1 (< 4.5)"
+                    f"{rel}: token color {value} on background {token_bg} is {ratio:.2f}:1 (< 4.5)"
     assert colored, "no inline token colors found in any code block: the check would be vacuous"
 
 
@@ -569,20 +675,16 @@ CALLOUT_CLASS = re.compile(r"note|callout|admonition|alert", re.I)
 
 
 def titled_block_text(page, phrase):
-    """Text of the block titled `phrase`: a heading's section, or a whole callout whose title
-    (a heading, or any element whose text starts with the phrase) sits at its top."""
+    """Text of the block titled `phrase`. The title must be a heading (a screen reader moves by
+    headings): a heading inside a callout gives the whole callout, any other heading gives its
+    section. A callout whose title is a paragraph does not count."""
     for h in (n for n in page.walk() if n.tag in HEADINGS):
         if squash(h.text()).lower().startswith(phrase):
+            parent = h.parent
+            if parent is not None and CALLOUT_CLASS.search(parent.attrs.get("class", "")):
+                return squash(parent.text())
             return section_text(page, h)
-    for node in page.walk():
-        starts = squash(node.text()).lower().startswith(phrase)
-        deeper = any(isinstance(c, Node) and squash(c.text()).lower().startswith(phrase)
-                     for c in node.children)
-        parent = node.parent
-        if starts and not deeper and parent is not None and parent.tag != "#root" \
-                and CALLOUT_CLASS.search(parent.attrs.get("class", "")):
-            return squash(parent.text())
-    raise AssertionError(f"no heading or callout is titled {phrase!r}")
+    raise AssertionError(f"no heading is titled {phrase!r} (a callout title must be a heading)")
 
 
 def check_content_blocks(public):
@@ -680,12 +782,32 @@ def test_t_site_5_snippets_served_and_rendered_verbatim():
     check_snippets_served(sitebuild.public())
 
 
+def test_t_site_5_build_copies_all_four_files_to_both_locations(tmp_path):
+    """F10: scripts/build_site.py puts quickstart.mjs, quickstart.py, requirements.txt and
+    .env.example, byte for byte, in both site/assets/snippets/ and site/static/quickstart/files/
+    (the second location is what check_snippets_served then finds in the built site)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("build_site", REPO / "scripts" / "build_site.py")
+    build_site = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build_site)
+    site = tmp_path / "site"
+    build_site.copy_snippets(site)
+    for folder in (site / "assets" / "snippets", site / "static" / "quickstart" / "files"):
+        assert sorted(p.name for p in folder.iterdir()) == sorted(build_site.SNIPPETS.values()), folder
+        for src, name in build_site.SNIPPETS.items():
+            assert (folder / name).read_bytes() == (REPO / src).read_bytes(), f"{folder}/{name}"
+
+
 def test_t_site_6_tabs_markup():
     check_tabs(sitebuild.public())
 
 
 def test_t_site_6_inline_script_budget():
     check_script_budget(sitebuild.public())
+
+
+def test_t_site_6_menu_toggle_is_a_button():
+    check_menu_toggle(sitebuild.public())
 
 
 def test_t_site_7_copy_buttons():
@@ -707,13 +829,23 @@ def test_t_site_10_llms_txt():
 # --- self-tests: the checks against generated fixture output ----------------------------
 
 
-def highlight(code, color="#0a3069", background="#f7f7f7"):
+def highlight(code, color="#0a3069", background="#f7f7f7", token_bg=None):
     from html import escape
-    lines = "".join(f"<span style=display:flex><span><span style=color:{color}>"
+    token_bg = f";background-color:{token_bg}" if token_bg else ""
+    lines = "".join(f"<span style=display:flex><span><span style=color:{color}{token_bg}>"
                     f"{escape(ln, quote=True)}</span>\n</span></span>"
                     for ln in code.rstrip("\n").split("\n"))
     return (f"<pre tabindex=0 style=background-color:{background};tab-size:4>"
             f"<code>{lines}</code></pre>")
+
+
+PYTHON_PANEL = "<div role=tabpanel class=qs-panel tabindex=0 id=panel-python"
+NOSCRIPT = ("<noscript><style>.qs-tab-heading{display:block}"
+            ".qs-tabs .qs-panel{display:block!important}</style></noscript>")
+TOGGLE = ('<button type=button id=sidebar-toggle aria-label="Toggle navigation" '
+          'aria-controls=sidebar aria-expanded=false>Menu</button>')
+INLINE_SCRIPT = re.search(r"<script>.*?</script>", (FIXTURES / "quickstart.html").read_text(
+    encoding="utf-8"), re.S).group(0)
 
 
 def build_fixture(dest, **break_it):
@@ -725,9 +857,11 @@ def build_fixture(dest, **break_it):
     code = {lang: (REPO / "quickstart" / rel).read_text(encoding="utf-8")
             for lang, rel in SNIPPET_FILES.items()}
     color = "#cccccc" if break_it.get("low_contrast") else "#0a3069"
+    color = break_it.get("token_color") or color
     page = (FIXTURES / "quickstart.html").read_text(encoding="utf-8")
-    page = page.replace("@@NODE@@", highlight(code["node"], color))
-    page = page.replace("@@PYTHON@@", highlight(code["python"], color))
+    page = page.replace("@@NODE@@", highlight(code["node"], color, token_bg=break_it.get("token_bg")))
+    page = page.replace("@@PYTHON@@", highlight(code["python"], color,
+                                                 token_bg=break_it.get("token_bg")))
     if break_it.get("edited_snippet"):
         page = page.replace("fetch(", "fetch (")
     for needle, repl in {
@@ -735,7 +869,26 @@ def build_fixture(dest, **break_it):
         "no_live_region": (" aria-live=polite", ""),
         "two_selected": ("aria-selected=false", "aria-selected=true"),
         "no_controls": ("aria-controls=panel-python", ""),
-        "hidden_panel": ("<div role=tabpanel id=panel-python", "<div hidden role=tabpanel id=panel-python"),
+        "hidden_panel": (PYTHON_PANEL, "<div hidden " + PYTHON_PANEL[1:]),
+        "panel_not_focusable": (" tabindex=0 id=panel-python", " id=panel-python"),
+        "broken_reciprocal": ("aria-labelledby=tab-python", "aria-labelledby=tab-node"),
+        "duplicate_tab_id": ("<button role=tab id=tab-python", "<button role=tab id=tab-node"),
+        "no_noscript": (NOSCRIPT, ""),
+        "noscript_other_rule": (".qs-tabs .qs-panel{display:block!important}",
+                                ".qs-tabs .qs-pane{display:block!important}"),
+        "noscript_hides": ("{display:block!important}", "{display:none!important}"),
+        "toggle_is_a_link": (TOGGLE, TOGGLE.replace("<button type=button", "<a href=# role=button")
+                             .replace("</button>", "</a>")),
+        "toggle_no_expanded": (" aria-expanded=false>Menu", ">Menu"),
+        "toggle_no_controls": (" aria-controls=sidebar", ""),
+        "toggle_no_label": (' aria-label="Toggle navigation"', ""),
+        "toggle_script_no_sync": ('nav.setAttribute("aria-expanded",true)', 'nav.setAttribute("x",true)'),
+        "external_script": ("</head>", "<script src=/js/theme.js></script></head>"),
+        "second_script": ("</head>", "<script>var a=1</script></head>"),
+        "no_script": (INLINE_SCRIPT, ""),
+        "big_script": ('var K="qs-lang"', "/*" + "x" * 2100 + '*/var K="qs-lang"'),
+        "external_stylesheet": ("</head>", "<link rel=stylesheet href=/css/theme.css?1></head>"),
+        "second_style": ("</head>", "<style>b{color:#000}</style></head>"),
         "no_noindex": ("<meta name=robots content=noindex>", ""),
         "no_footer": ("Unofficial community quickstart.", "Community quickstart."),
         "banned": ("Keep the key safe", "An unbreakable key"),
@@ -766,7 +919,7 @@ def build_fixture(dest, **break_it):
 
 
 GOOD_CHECKS = [check_not_official, check_help_and_anchors, check_snippets_served, check_tabs,
-               check_script_budget, check_copy_buttons, check_code_contrast, check_content_blocks,
+               check_script_budget, check_menu_toggle, check_copy_buttons, check_code_contrast, check_content_blocks,
                check_llms_txt]
 
 
@@ -790,9 +943,27 @@ BREAKS = [
     (check_tabs, "two_selected", "aria-selected"),
     (check_tabs, "no_controls", "aria-controls"),
     (check_tabs, "hidden_panel", "hidden"),
+    (check_tabs, "panel_not_focusable", "focusable"),
+    (check_tabs, "broken_reciprocal", "point back"),
+    (check_tabs, "duplicate_tab_id", "unique id"),
+    (check_tabs, "no_noscript", "noscript"),
+    (check_tabs, "noscript_other_rule", "noscript"),
+    (check_tabs, "noscript_hides", "noscript"),
+    (check_menu_toggle, "toggle_is_a_link", "<button"),
+    (check_menu_toggle, "toggle_no_expanded", "aria-expanded"),
+    (check_menu_toggle, "toggle_no_controls", "aria-controls"),
+    (check_menu_toggle, "toggle_no_label", "aria-label"),
+    (check_menu_toggle, "toggle_script_no_sync", "never updates aria-expanded"),
+    (check_script_budget, "external_script", "external scripts"),
+    (check_script_budget, "second_script", "exactly one inline"),
+    (check_script_budget, "no_script", "exactly one inline"),
+    (check_script_budget, "big_script", "budget"),
+    (check_script_budget, "external_stylesheet", "external stylesheets"),
+    (check_script_budget, "second_style", "exactly one <style>"),
     (check_copy_buttons, "no_aria_label", "aria-label"),
     (check_copy_buttons, "no_live_region", "aria-live"),
     (check_code_contrast, "low_contrast", "1."),
+    (check_code_contrast, "black_on_black_token", "background (0, 0, 0)"),
     (check_content_blocks, "banned", "banned"),
     (check_content_blocks, "no_tls", "TLS"),
     (check_content_blocks, "no_benchmark_link", "benchmarks.md"),
@@ -803,10 +974,22 @@ BREAKS = [
 @pytest.mark.parametrize("check,flag,expect", BREAKS, ids=lambda v: v if isinstance(v, str)
                          else getattr(v, "__name__", str(v)))
 def test_selftest_each_check_can_fail(check, flag, expect, tmp_path):
+    options = {"black_on_black_token": {"token_color": "#000000", "token_bg": "#000000"}}
     site = build_fixture(tmp_path / "public", **{flag: True, "drop_anchor": "429"
-                                                 if flag == "drop_anchor" else None})
+                                                 if flag == "drop_anchor" else None},
+                         **options.get(flag, {}))
     with pytest.raises(AssertionError, match=re.escape(expect)):
         check(site)
+
+
+def test_selftest_contrast_uses_the_token_background(tmp_path):
+    """F8: light text on a dark token background passes even though the block is light, and the
+    same text on the block's own background fails; dark on dark fails (BREAKS)."""
+    ok = build_fixture(tmp_path / "ok", token_color="#ffffff", token_bg="#000000")
+    check_code_contrast(ok)
+    bad = build_fixture(tmp_path / "bad", token_color="#ffffff")
+    with pytest.raises(AssertionError, match=r"1\.07:1"):
+        check_code_contrast(bad)
 
 
 def test_selftest_contrast_math():
@@ -851,6 +1034,40 @@ def test_selftest_shell_diff_detects_changes(tmp_path, edit, expect):
         check_shell_unchanged(ours, up)
 
 
+TEXTY = ("<main><p>Hello  there, it\u2019s fine<p>Use <code>a  b</code> here"
+         "<pre><code>def f():\n    return 1\n</code></pre>"
+         "<script>if (a) {\n  b();\n}</script><style>p {\n  margin: 0 }</style></main>")
+TEXTY_UPSTREAM = MENU_UPSTREAM.replace("<main><p>Hello</main>", TEXTY)
+TEXTY_OURS = MENU_OURS.replace("<main><p>Hello</main>", TEXTY)
+
+
+def test_selftest_shell_diff_keeps_text_exactly(tmp_path):
+    """F2: with identical text, the allowed differences (menu item, cache busting) still pass."""
+    ours, up = _write_pair(tmp_path, TEXTY_UPSTREAM, TEXTY_OURS)
+    check_shell_unchanged(ours, up)
+
+
+@pytest.mark.parametrize("old,new", [
+    ("    return 1", "  return 1"),                    # indentation inside <pre>
+    ("    return 1", "\treturn 1"),                    # tab for spaces inside <pre>
+    ("return 1\n</code>", "return 1</code>"),          # trailing newline inside <pre>
+    ("def f():\n", "def f():\n\n"),                    # blank line inside <pre>
+    ("<code>a  b</code>", "<code>a b</code>"),         # whitespace inside inline <code>
+    ("  b();", "b();"),                                 # indentation inside <script>
+    ("  margin: 0", "margin: 0"),                       # indentation inside <style>
+    ("Hello  there", "Hello there"),                    # whitespace outside code is content too
+    ("it\u2019s", "it's"),                              # and so is the apostrophe
+], ids=["pre-indent", "pre-tab", "pre-newline", "pre-blank-line", "inline-code", "script",
+        "style", "text-whitespace", "text-apostrophe"])
+def test_selftest_shell_diff_rejects_whitespace_and_text_changes(tmp_path, old, new):
+    """F2: a changed character anywhere in the text, above all indentation inside <pre>, <code>,
+    <script> and <style>, is a difference from upstream."""
+    assert old in TEXTY_OURS
+    ours, up = _write_pair(tmp_path, TEXTY_UPSTREAM, TEXTY_OURS.replace(old, new, 1))
+    with pytest.raises(AssertionError, match="differ from upstream"):
+        check_shell_unchanged(ours, up)
+
+
 def test_selftest_shell_diff_detects_missing_and_extra_pages(tmp_path):
     ours, up = _write_pair(tmp_path, MENU_UPSTREAM, MENU_OURS)
     (ours / "stray.html").write_text("<p>x")
@@ -862,17 +1079,41 @@ def test_selftest_shell_diff_detects_missing_and_extra_pages(tmp_path):
         check_shell_unchanged(ours, up)
 
 
-def test_selftest_content_blocks_accept_callout_titles(tmp_path):
-    """The `qs-note` shortcode titles a callout with a <p class=t>, not a heading."""
+def _with_callouts(tmp_path, title_tag):
+    """The fixture page with its two titled sections turned into qs-note callouts whose title
+    is a `title_tag` element (h3 as the real shortcode emits, or p)."""
     site = build_fixture(tmp_path / "public")
     page = site / QUICKSTART
     html = page.read_text(encoding="utf-8")
     for title in ("What this does and doesn&rsquo;t give you",
                   "The portal showed you different sample code?"):
         html = re.sub(rf"<h2 id=\w+>{re.escape(title)}</h2>\s*<p>",
-                      f'<div class="qs-note info"><p class=t>{title}</p><p>', html)
+                      f'<div class="qs-note qs-note-info"><{title_tag} class=qs-note-title>{title}'
+                      f"</{title_tag}><p>", html)
     html = html.replace("to api-eus.\n", "to api-eus.</div>\n").replace(
         "Qrypt SDK.\n", "Qrypt SDK.</div>\n")
-    assert 'class="qs-note info"' in html
+    assert 'class="qs-note qs-note-info"' in html
     page.write_text(html, encoding="utf-8")
-    check_content_blocks(site)
+    return site
+
+
+def test_selftest_content_blocks_accept_callout_headings(tmp_path):
+    """F4: the `qs-note` shortcode titles a callout with a heading, and T-site-9 reads the
+    whole callout from it."""
+    check_content_blocks(_with_callouts(tmp_path, "h3"))
+
+
+def test_selftest_content_blocks_reject_a_paragraph_title(tmp_path):
+    """F4: a callout titled with a <p> is not accepted any more."""
+    with pytest.raises(AssertionError, match="must be a heading"):
+        check_content_blocks(_with_callouts(tmp_path, "p"))
+
+
+def test_t_site_9_real_callouts_use_headings():
+    """F4, on the real build: every qs-note on both pages has an h3 title."""
+    for rel in OUR_PAGES:
+        notes = [n for n in load(sitebuild.public(), rel).walk()
+                 if "qs-note" in n.attrs.get("class", "").split()]
+        for note in notes:
+            titles = [c for c in note.children if isinstance(c, Node) and c.tag in HEADINGS]
+            assert titles and titles[0].tag == "h3", f"{rel}: a callout has no h3 title: {note}"

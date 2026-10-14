@@ -1,5 +1,7 @@
 /* Quickstart section */
 :focus-visible{outline:2px solid #3b39c9;outline-offset:2px}
+#sidebar-toggle{padding:0;font:inherit;line-height:inherit;vertical-align:middle;color:var(--blue);background:none;border:0;cursor:pointer}
+#sidebar-toggle:hover{color:var(--blue-75)}
 .qs-skip{position:absolute;left:-999px;top:0;z-index:100;padding:.5rem 1rem;background:#fff;color:#171628}
 .qs-skip:focus{left:0}
 .qs-code{margin:1rem 0;max-width:45rem;border:1px solid #d2d2d5;border-radius:.75rem;overflow:hidden;background:#f1f1f1}
@@ -24,7 +26,8 @@
 .qs-note-warning{border-left-color:#b45309;background:#fff4e0}
 .qs-note>:first-child{margin-top:0}
 .qs-note>:last-child{margin-bottom:0}
-.qs-note-title{font-weight:600}
+.qs-note .qs-note-title{margin:1rem 0;font:inherit;font-weight:600;line-height:inherit!important;letter-spacing:normal;color:inherit}
+.qs-note>.qs-note-title:first-child{margin-top:0}
 .qs-note-warning .qs-note-title::before{content:"! " / ""}
 .qs-attribution{max-width:45rem;margin:3rem 0 1rem;padding-top:1rem;border-top:1px solid #d2d2d5}
 .qs-attribution p{margin:0;font-size:.8rem;line-height:1.2rem;color:#5b5b66}

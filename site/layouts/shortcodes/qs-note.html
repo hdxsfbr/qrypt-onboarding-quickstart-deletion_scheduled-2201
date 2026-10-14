@@ -5,6 +5,6 @@
 {{- $kind := .Get "kind" | default "info" -}}
 {{- if not (in (slice "info" "warning") $kind) }}{{ errorf "qs-note: kind must be info or warning, got %q (%s)" $kind .Position }}{{ end -}}
 <div class="qs-note qs-note-{{ $kind }}" role="note">
-  {{- with .Get "title" }}<p class="qs-note-title">{{ . }}</p>{{ end }}
+  {{- with .Get "title" }}<h3 class="qs-note-title">{{ . }}</h3>{{ end }}
   {{ .Inner }}
 </div>

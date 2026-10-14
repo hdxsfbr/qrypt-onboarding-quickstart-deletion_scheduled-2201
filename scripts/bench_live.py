@@ -8,7 +8,9 @@ folder. The key is read from --key-file and never printed or put on a command li
 
 Outputs
   docs/evidence/benchmarks.md  per-run times, p50 and max, the date, Node and Python versions
-  docs/evidence/usage.csv      one ledger row per run (1,024 bytes for a successful run)
+  docs/evidence/usage.csv      one ledger row per run, appended as soon as the run ends
+                               (1,024 bytes unless the snippet printed an HTTP-error or
+                               network-error line, see entropy_consumed)
 
 Safety: sleeps --sleep seconds between runs, aborts before starting if the ledger total plus
 the planned runs would exceed --budget-mib (9 MiB, leaving 1 MiB under the 10 MB cap), and
@@ -94,8 +96,23 @@ def version(cmd):
     return (done.stdout or done.stderr).strip()
 
 
+# The snippets' own failure lines (docs/TDD.md section 2). A run that printed one of these
+# never received entropy: the server answered with an error, or no answer arrived.
+NO_ENTROPY_LINE = re.compile(r"^✘ (Qrypt returned HTTP \d{3}:|Could not reach Qrypt \()",
+                             re.MULTILINE)
+
+
+def entropy_consumed(stderr):
+    """Bytes of entropy a run counts against the budget. Any run that did not print an
+    HTTP-error or network-error ✘ line before exiting counts as having received one 1,024-byte
+    block, even if the snippet then failed (bad body, AES failure, timeout): the conservative
+    reading for a budget guard."""
+    return 0 if NO_ENTROPY_LINE.search(stderr or "") else ENTROPY_BYTES
+
+
 def one_run(lang, interpreter, key, api_url, secret):
-    """Returns (seconds, ok, http_status, detail). `secret` is scrubbed from any output."""
+    """Returns (seconds, ok, http_status, detail, entropy_bytes). `secret` is scrubbed from any
+    output."""
     source = REPO / LANGS[lang][1]
     folder = pathlib.Path(tempfile.mkdtemp(prefix=f"qs-bench-{lang}-"))
     try:
@@ -109,15 +126,17 @@ def one_run(lang, interpreter, key, api_url, secret):
                                   stdin=subprocess.DEVNULL, capture_output=True, text=True,
                                   encoding="utf-8", timeout=RUN_TIMEOUT_S)
         except subprocess.TimeoutExpired:
-            return time.perf_counter() - start, False, 0, f"timed out after {RUN_TIMEOUT_S} s"
+            return (time.perf_counter() - start, False, 0, f"timed out after {RUN_TIMEOUT_S} s",
+                    entropy_consumed(""))
         seconds = time.perf_counter() - start
     finally:
         shutil.rmtree(folder, ignore_errors=True)  # removes the .env with it
     if done.returncode == 0 and done.stdout.strip() == SUCCESS:
-        return seconds, True, 200, ""
+        return seconds, True, 200, "", ENTROPY_BYTES
     detail = (done.stderr.strip().splitlines() or ["no output"])[0].replace(secret, "<redacted>")
     http = re.search(r"HTTP (\d{3})", detail)
-    return seconds, False, int(http.group(1)) if http else 0, detail[:160]
+    return (seconds, False, int(http.group(1)) if http else 0, detail[:160],
+            entropy_consumed(done.stderr))
 
 
 def start_mock():
@@ -134,8 +153,9 @@ def percentile_row(values):
     return (f"{statistics.median(values):.2f}", f"{max(values):.2f}") if values else ("n/a", "n/a")
 
 
-def render(results, runs, versions, today, dry_run):
-    """The benchmarks.md text. results: lang -> list of (seconds, ok, status, detail)."""
+def render(results, runs, versions, today, dry_run, sleep=1.0):
+    """The benchmarks.md text. results: lang -> list of (seconds, ok, status, detail, bytes).
+    `sleep` is the spacing between runs, in seconds, exactly as passed to --sleep."""
     langs = list(results)
     lines = ["# Live benchmark: running the quickstart", ""]
     if dry_run:
@@ -148,7 +168,7 @@ def render(results, runs, versions, today, dry_run):
         f"{'the mock' if dry_run else 'the live `api-eus` endpoint'} with `size=1`, started from a fresh folder holding only the "
         "script and a `.env`. The time is wall-clock, from process start to exit, in seconds, "
         f"including interpreter start-up. {runs} run{'s' if runs != 1 else ''} per language, "
-        "1 s apart. This measures "
+        f"{sleep:g} s apart. This measures "
         "the run step only; the five-minute figure on the page covers the whole path.",
         "",
         "| Run | " + " | ".join(f"{LANGS[l][0]} (s)" for l in langs) + " |",
@@ -157,7 +177,7 @@ def render(results, runs, versions, today, dry_run):
     for n in range(runs):
         cells = []
         for lang in langs:
-            seconds, ok, _, _ = results[lang][n] if n < len(results[lang]) else (0, None, 0, "")
+            seconds, ok = results[lang][n][:2] if n < len(results[lang]) else (0, None)
             cells.append("not run" if ok is None else f"{seconds:.2f}" if ok else
                          f"failed ({seconds:.2f})")
         lines.append(f"| {n + 1} | " + " | ".join(cells) + " |")
@@ -173,7 +193,8 @@ def render(results, runs, versions, today, dry_run):
                  if failed or slowest >= TARGET_S else f"Result: met (slowest run {slowest:.2f} s)."),
               ""]
     if not dry_run:
-        lines += [f"Entropy used: {sum(1 for l in langs for r in results[l] if r[1])} KiB, "
+        used = sum(r[4] for l in langs for r in results[l])
+        lines += [f"Entropy used: {used // 1024} KiB, "
                   "recorded in `docs/evidence/usage.csv`.", ""]
     return "\n".join(lines)
 
@@ -233,16 +254,19 @@ def main(argv=None):
         api_url = None  # the snippets' own default: the live endpoint
 
     results = {lang: [] for lang in LANGS}
-    ledger_rows, aborted = [], False
+    aborted = False
     try:
         for n in range(args.runs):
             for lang in LANGS:
-                seconds, ok, status, detail = one_run(lang, interpreters[lang], key, api_url, key)
-                results[lang].append((seconds, ok, status, detail))
-                ledger_rows.append([dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-                                    f"bench_live_{lang}", status, ENTROPY_BYTES if ok else 0])
+                result = one_run(lang, interpreters[lang], key, api_url, key)
+                seconds, ok, status, detail, consumed = result
+                results[lang].append(result)
+                if not args.dry_run:  # the ledger is written per run, before anything else
+                    append_ledger(args.ledger, [[
+                        dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                        f"bench_live_{lang}", status, consumed]])
                 print(f"run {n + 1}/{args.runs} {lang:6} {'ok  ' if ok else 'FAIL'} "
-                      f"{seconds:5.2f}s {detail}")
+                      f"{seconds:5.2f}s {consumed:4d} B {detail}")
                 if not ok and status in (403, 429):
                     print(f"stopping: HTTP {status} (quota or rate limit); not retrying",
                           file=sys.stderr)
@@ -255,11 +279,9 @@ def main(argv=None):
     finally:
         if mock:
             mock.terminate()
-        if ledger_rows and not args.dry_run:
-            append_ledger(args.ledger, ledger_rows)
 
     today = dt.datetime.now(dt.timezone.utc).date().isoformat()
-    report = render(results, args.runs, versions, today, args.dry_run)
+    report = render(results, args.runs, versions, today, args.dry_run, args.sleep)
     out = args.out or (None if args.dry_run else OUT)
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)

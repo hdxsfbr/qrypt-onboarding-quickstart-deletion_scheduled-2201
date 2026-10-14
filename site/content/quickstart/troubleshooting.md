@@ -51,7 +51,7 @@ Every error the quickstart script prints ends with a `Fix:` link to a section on
 
 **Fix:** First check that you can reach Qrypt at all. This command sends no key, and a response of `401` means the request reached Qrypt:
 
-```sh
+```sh {test="no"}
 curl -sS -o /dev/null -w '%{http_code}\n' 'https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1'
 ```
 
@@ -104,11 +104,11 @@ Don't re-run the script in a loop while you work this out. See [Don't loop reque
 
 ## HTTP 429: too many requests {#429}
 
-**You see:** `✘ Qrypt returned HTTP 429: over 30 requests in 10 seconds; wait, then run once.`
+**You see:** `✘ Qrypt returned HTTP 429: rate limit reached; wait about 15 seconds, then run once.`
 
-**Likely cause:** Qrypt allows 30 requests per 10 seconds for each access token. Something sent more. It is often a loop, a retry in your own code, or several scripts and tools sharing one key.
+**Likely cause:** Qrypt's docs state 30 requests per 10 seconds for each access token, but the live API is stricter. On 2026-10-14 it returned 429 on back-to-back requests about a second apart. Something sent requests too close together. It is often a loop, a retry in your own code, or several scripts and tools sharing one key.
 
-**Fix:** Stop whatever is sending requests. Wait at least 10 seconds. Then run the script once. See [Don't loop requests](#rate-limit) and [403 or 429](#403-vs-429).
+**Fix:** Stop whatever is sending requests. Wait about 15 seconds. Then run the script once. See [Don't loop requests](#rate-limit) and [403 or 429](#403-vs-429).
 
 ## HTTP 500: internal server error {#500}
 
@@ -176,11 +176,11 @@ Both mean "not now", but they have different causes and different fixes.
 
 | | HTTP 403 | HTTP 429 |
 |---|---|---|
-| The script says | `key rejected, or monthly entropy quota used up` | `over 30 requests in 10 seconds; wait, then run once` |
-| What it means | The key is wrong, or the monthly quota is used up | The key sent more than 30 requests in 10 seconds |
-| How long it lasts | Until you use a correct key, or until the quota resets on your account's monthly anniversary day | About 10 seconds |
+| The script says | `key rejected, or monthly entropy quota used up` | `rate limit reached; wait about 15 seconds, then run once` |
+| What it means | The key is wrong, or the monthly quota is used up | The key sent requests too close together. Qrypt's docs state 30 requests per 10 seconds, but on 2026-10-14 the live API returned 429 on requests about a second apart |
+| How long it lasts | Until you use a correct key, or until the quota resets on your account's monthly anniversary day | Wait about 15 seconds |
 | Does waiting a few seconds help? | No | Yes |
-| What to do | Check the key and the quota. See [HTTP 403](#403) | Stop any loop, wait 10 seconds, run once. See [HTTP 429](#429) |
+| What to do | Check the key and the quota. See [HTTP 403](#403) | Stop any loop, wait about 15 seconds, run once. See [HTTP 429](#429) |
 
 ## `size` is KiB, not bytes {#size-kib}
 
@@ -202,9 +202,9 @@ Both mean "not now", but they have different causes and different fixes.
 
 **You see:** A 429, or a 403 after a while.
 
-**Likely cause:** Qrypt allows 30 requests per 10 seconds for each access token. Everything that uses the same key shares that limit. Every request also uses part of your monthly entropy quota. A loop, a retry in your own code, or a coding tool that keeps re-running the script can hit both limits quickly.
+**Likely cause:** Qrypt's docs state 30 requests per 10 seconds for each access token. On 2026-10-14 the live API returned 429 on back-to-back requests about a second apart, so leave more room than that. Everything that uses the same key shares the limit. Every request also uses part of your monthly entropy quota. A loop, a retry in your own code, or a coding tool that keeps re-running the script can hit both limits quickly.
 
-**Fix:** Run the script once. If it fails, read the message and use the matching section on this page before you run it again. Don't add automatic retries.
+**Fix:** Run the script once. If you get a 429, wait about 15 seconds and run once. If it fails, read the message and use the matching section on this page before you run it again. Don't add automatic retries.
 
 ## .env missing, or wrong folder {#env-file}
 
@@ -234,19 +234,19 @@ Both mean "not now", but they have different causes and different fixes.
 
 For a proxy, set `HTTPS_PROXY`. Python's `requests` reads it. Node.js's built-in `fetch` ignores it unless you also set `NODE_USE_ENV_PROXY=1`. Older Node.js versions may not support that setting. In that case, use the Python version.
 
-```sh
+```sh {test="no"}
 export HTTPS_PROXY=http://proxy.example.com:8080
 ```
 
 For a custom CA with Node.js:
 
-```sh
+```sh {test="no"}
 export NODE_EXTRA_CA_CERTS=/path/ca.pem
 ```
 
 For a custom CA with Python:
 
-```sh
+```sh {test="no"}
 export REQUESTS_CA_BUNDLE=/path/ca.pem
 ```
 

@@ -2,7 +2,7 @@
 
 Date (UTC): 2026-10-14. Node.js v24.14.0, Python 3.13.2.
 
-Each run is `quickstart.mjs / quickstart.py` against the live `api-eus` endpoint with `size=1`, started from a fresh folder holding only the script and a `.env`. The time is wall-clock, from process start to exit, in seconds, including interpreter start-up. 5 runs per language, 1 s apart. This measures the run step only; the five-minute figure on the page covers the whole path.
+Each run is `quickstart.mjs / quickstart.py` against the live `api-eus` endpoint with `size=1`, started from a fresh folder holding only the script and a `.env`. The time is wall-clock, from process start to exit, in seconds, including interpreter start-up. 5 runs per language, 15 s apart. This measures the run step only; the five-minute figure on the page covers the whole path.
 
 | Run | Node.js (s) | Python (s) |
 |---|---|---|

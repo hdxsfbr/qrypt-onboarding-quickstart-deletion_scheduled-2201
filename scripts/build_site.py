@@ -6,7 +6,8 @@
 1. Finds Hugo 0.154.5: $HUGO if set, else .tools/hugo-0.154.5/hugo, downloaded on first use
    (linux-amd64 release; the tarball's SHA-256 must match both the pin below and the release's
    own checksums file).
-2. Copies the snippet files from quickstart/ into site/assets/snippets/ (rendered by the
+2. Copies all four snippet files (quickstart.mjs, quickstart.py, requirements.txt,
+   .env.example) into both site/assets/snippets/ (the two scripts are rendered by the
    shortcodes) and site/static/quickstart/files/ (served for `curl -O`). Both are generated
    and gitignored.
 3. Runs `hugo --minify`. Any Hugo ERROR line, or a non-zero exit, fails the build.
@@ -39,8 +40,6 @@ SNIPPETS = {
     "quickstart/python/requirements.txt": "requirements.txt",
     ".env.example": ".env.example",
 }
-# Only these two are rendered into pages; the others are download-only.
-RENDERED = ("quickstart.mjs", "quickstart.py")
 
 
 def fetch(url: str) -> bytes:
@@ -77,10 +76,7 @@ def find_hugo() -> pathlib.Path:
 
 
 def copy_snippets(site: pathlib.Path) -> None:
-    targets = {
-        site / "static" / "quickstart" / "files": list(SNIPPETS.values()),
-        site / "assets" / "snippets": list(RENDERED),
-    }
+    targets = [site / "static" / "quickstart" / "files", site / "assets" / "snippets"]
     for folder in targets:
         shutil.rmtree(folder, ignore_errors=True)
         folder.mkdir(parents=True)
@@ -88,9 +84,8 @@ def copy_snippets(site: pathlib.Path) -> None:
         path = ROOT / src
         if not path.is_file():
             sys.exit(f"build_site: missing snippet source {src}")
-        for folder, names in targets.items():
-            if name in names:
-                shutil.copyfile(path, folder / name)
+        for folder in targets:
+            shutil.copyfile(path, folder / name)
 
 
 def main() -> int:

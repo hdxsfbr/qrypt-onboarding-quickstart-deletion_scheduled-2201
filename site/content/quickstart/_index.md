@@ -157,7 +157,7 @@ The entropy comes from Qrypt's quantum source and travels to you over HTTPS (TLS
 
 ## Next steps {#next-steps}
 
-- Run the script once per key you need. Each request uses part of your monthly entropy quota, and Qrypt allows 30 requests per 10 seconds for each key. Don't put the script in a loop.
+- Run the script once per key you need. Each request uses part of your monthly entropy quota, and Qrypt's docs state a limit of 30 requests per 10 seconds for each key. In practice, leave about 15 seconds between requests. Don't put the script in a loop.
 - Read Qrypt's [Quantum Entropy reference](https://docs.qrypt.com/eaas/) for the full request and response format.
 - Read about Qrypt's [key generation SDK](https://docs.qrypt.com/sdk/) if your keys must never cross the network.
 - If something goes wrong, open the [troubleshooting page](/quickstart/troubleshooting/).

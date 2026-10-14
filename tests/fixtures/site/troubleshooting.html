@@ -1,7 +1,11 @@
 <!doctype html><html lang=en><head><meta charset=utf-8><title>Troubleshooting</title>
-<meta name=robots content=noindex></head>
-<body><main><h1>Troubleshooting</h1>
+<meta name=robots content=noindex>
+<style>main{max-width:45rem}</style></head>
+<body><button type=button id=sidebar-toggle aria-label="Toggle navigation" aria-controls=sidebar aria-expanded=false>Menu</button>
+<nav id=sidebar><a href=/eaas/>EaaS</a></nav>
+<main><h1>Troubleshooting</h1>
 @@SECTIONS@@
 </main>
 <footer>Unofficial community quickstart. Docs shell &copy; Qrypt, CC BY-NC-SA 4.0. Official docs: <a href=https://docs.qrypt.com>docs.qrypt.com</a></footer>
+<script>var nav=document.getElementById("sidebar-toggle");nav.addEventListener("click",function(){nav.setAttribute("aria-expanded",true)});</script>
 </body></html>

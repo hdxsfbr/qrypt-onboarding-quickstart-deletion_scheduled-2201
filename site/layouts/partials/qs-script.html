@@ -50,8 +50,9 @@
       navigator.clipboard.writeText(code.textContent).then(function () { say("Copied", 2000); }, manual);
     });
   });
-  function menu(e) { e.preventDefault(); d.body.classList.toggle("sidebar-hidden"); }
-  d.getElementById("sidebar-toggle").addEventListener("click", menu);
+  var nav = d.getElementById("sidebar-toggle");
+  function menu() { nav.setAttribute("aria-expanded", d.body.classList.toggle("sidebar-hidden")); }
+  nav.addEventListener("click", menu);
   d.getElementById("overlay").addEventListener("click", menu);
 })();
 </script>

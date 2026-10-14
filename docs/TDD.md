@@ -32,6 +32,7 @@ Create any agent API key yourself and store it under `~/.config/agentforge/`. I 
 ### Decision log (after sign-off)
 
 - 2026-10-14. **Wave 1 review leftovers accepted as is** (Andre). Python treats only HTTP 200 as success (S1). T-s-19 doesn't prove nonce freshness or OS origin. T-s-21 checks the default URL statically rather than intercepting a request.
+- 2026-10-14. **Load time deferred** (Andre: end to end first). On the Cloudflare preview, LCP p95 is about 1.52–1.58 s against the < 1.5 s target, with accessibility at 100. Our pages now use an inline SVG favicon (86 KiB down to 57 KiB), which didn't move LCP. The gap is the web-font swap repaint (LCP minus FCP is about 540 ms). `font-display: optional` was also tried and gave p95 1,560 ms, no better. Revisit after wave 3, starting with font subsetting or fewer inlined theme rules.
 - 2026-10-14. **Workflow.** `main` is protected: no direct pushes, merges by maintainers only, and only when the pipeline succeeds and all discussions are resolved. Each wave lives on a `wave-N` branch and reaches `main` through a merge request, after Codex pass 2 and Andre's go-ahead. Wave 1 reached `main` by direct pushes before this rule existed.
 
 ---
@@ -120,7 +121,7 @@ Message contract (stderr). The tests assert these exact strings:
 | `no-key` | `QRYPT_API_KEY is not set. Add QRYPT_API_KEY=<your key> to .env.` |
 | `runtime` | `Node.js 20.12+ required (found <process.version>).` |
 | `network` | `Could not reach Qrypt (<detail>).` |
-| `<status>` | `Qrypt returned HTTP <status>: <hint>.` The hints are: 401 `Authorization header missing or malformed`, 403 `key rejected, or monthly entropy quota used up`, 429 `over 30 requests in 10 seconds; wait, then run once`, 5xx `try again shortly`, otherwise `unexpected response`. |
+| `<status>` | `Qrypt returned HTTP <status>: <hint>.` The hints are: 401 `Authorization header missing or malformed`, 403 `key rejected, or monthly entropy quota used up`, 429 `rate limit reached; wait about 15 seconds, then run once` (changed 2026-10-14: the live API returned 429 on back-to-back requests, far below the documented 30 per 10 s; see POV E16), 5xx `try again shortly`, otherwise `unexpected response`. |
 | `round-trip` | `AES-GCM round trip failed.` |
 
 **Edge cases:**
