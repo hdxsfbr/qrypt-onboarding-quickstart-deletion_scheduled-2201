@@ -11,7 +11,7 @@ import requests
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from dotenv import load_dotenv
 
-HELP = "https://qrypt-quickstart.invalid/quickstart/troubleshooting/"
+HELP = "https://qrypt-quickstart.pages.dev/quickstart/troubleshooting/"
 HINTS = {401: "Authorization header missing or malformed",
          403: "key rejected, or monthly entropy quota used up",
          429: "over 30 requests in 10 seconds; wait, then run once"}

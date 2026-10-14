@@ -17,7 +17,7 @@ Everything else in this document follows from the spec or the spikes. These six 
 | P3 | Activation window | **First successful call within 7 days of account creation**, cohorted by the UTC week the account was created | The brief says "signup → first successful call" without a window. A metric with no window never closes. |
 | P4 | "Return within 7 days" | **A successful call on a later UTC calendar day, no more than 168 h after the first successful call** | Rules out a same-session retry counting as a "return". The boundaries are tested in §8 (R1–R4). |
 | P5 | Agent run time cap | **20 minutes of wall-clock time**. A run that hits the cap counts as a failure, category `timeout`. | Keeps the test bounded. The brief's median target is 10 minutes. |
-| H1 | Where the site is hosted | **To decide** (see §5 deploy options). It must be publicly reachable without login, because the agent and the graders fetch it. This project's GitLab Pages is currently `private`. | The brief asks for "any free static host, built from the repo on push". |
+| H1 | Where the site is hosted | **Decided 2026-10-14: Cloudflare Pages**, project `qrypt-quickstart`, at https://qrypt-quickstart.pages.dev/. GitLab Pages is disabled on labs.gauntletai.com instance-wide (no Deploy > Pages menu item, `/pages` returns 404, no feature toggle). CI deploys with `wrangler pages deploy`, using masked, protected variables `CLOUDFLARE_API_TOKEN` (account token, Pages Read+Edit only, 90 days) and `CLOUDFLARE_ACCOUNT_ID`. | Free static host with a CDN, built from the repo on push |
 | P6 | How the agent gets the key | **The harness writes nothing.** The key is passed as a container environment variable (`QRYPT_API_KEY`), and the agent must create and use `.env` itself. | Keeps "skipped .env" a real, testable failure mode. The prompt stays exactly as the brief specifies. |
 
 Inputs only you can provide (none blocks wave 1):
@@ -44,7 +44,7 @@ Create any agent API key yourself and store it under `~/.config/agentforge/`. I 
    ├ content/quickstart/   (ours)                                              └ secrets scan → deploy     │
    ├ layouts/quickstart/, layouts/partials/qs-*  (ours)                              │                    │
    └ static/robots.txt, static/quickstart/  (ours)                                   ▼                    │
-                                                                   Static host (H1): <SITE_URL>                           
+                                                                   Cloudflare Pages: https://qrypt-quickstart.pages.dev/  
  agent-test/ (Docker harness + mitmproxy) ──► Gemini CLI ──► deployed site + api-eus.qrypt.com (live)     │
  scripts/ (probe_api, loc, lighthouse_runs, bench_live, extract_commands, build_site) ──► docs/evidence/  │
             └────────────────────────────────────────────────────────────────────────────────────────────┘

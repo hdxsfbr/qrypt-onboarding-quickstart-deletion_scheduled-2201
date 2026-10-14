@@ -3,7 +3,7 @@
 #   lint    — LOC and line-width limits, syntax checks, pinned requirements
 #   test    — pytest against the mock server: Python 3.10 and 3.13, Node 20.12, 22 and 24
 #   secrets — gitleaks over the full git history
-#   deploy  — on the default branch only, after everything else passes: GitLab Pages
+#   deploy  — on the default branch only, after everything else passes: Cloudflare Pages
 # No job needs a Qrypt key: the tests build their own sanitized environment and talk to the mock.
 # Each job calls scripts/ci_checks.sh, the same script the pre-push hook runs locally.
 # Every image is pinned to an exact tag. Node 20.12.0 is the documented minimum, so it is tested
@@ -63,14 +63,17 @@ secrets:
     # `gitleaks git` scans the commit history; --redact keeps matched values out of the job log.
     - scripts/ci_checks.sh secrets
 
-pages:
+deploy:
   stage: deploy
-  # GitLab 17.9+ marks Pages jobs explicitly; the job name alone may not trigger a deployment.
-  pages: true
-  image: python:3.13.15-slim-bookworm
+  image: node:22.23.2-bookworm
   needs: [lint, test-python, test-node, secrets]
+  # Cloudflare Pages (labs.gauntletai.com has no GitLab Pages). CLOUDFLARE_API_TOKEN and
+  # CLOUDFLARE_ACCOUNT_ID are masked, protected project variables, so this only runs on main;
+  # without the token the job is skipped rather than failed.
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CLOUDFLARE_API_TOKEN'
+  variables:
+    WRANGLER_SEND_METRICS: 'false'
   script:
     - mkdir -p public
     - |
@@ -90,5 +93,6 @@ pages:
       </body>
       </html>
       HTML
-  artifacts:
-    paths: [public]
+    - >-
+      npx -y wrangler@4.144.0 pages deploy public --project-name qrypt-quickstart --branch main
+      --commit-hash "$CI_COMMIT_SHA" --commit-message "$CI_COMMIT_TITLE" </dev/null
