@@ -172,12 +172,28 @@ def test_a5_scrub_cli_exits_nonzero_when_a_secret_survives(tmp_path, monkeypatch
     gfile.write_text(GEMINI_KEY + "\n")
     argv = [str(folder), "--qrypt-key-file", str(qfile), "--gemini-key-file", str(gfile)]
     # a scrub that fails to remove anything must be reported, not hidden
-    monkeypatch.setattr(scrub, "scrub_bytes", lambda data, secrets: data)
+    monkeypatch.setattr(scrub, "scrub_bytes", lambda data, secrets, pieces=False: data)
     assert scrub.main(argv) == 1
     assert "SECRET STILL PRESENT" in capsys.readouterr().err
     monkeypatch.undo()
     assert scrub.main(argv) == 0
     assert QRYPT_KEY not in (folder / "workspace" / "main.py").read_text()
+
+
+def test_a5_scrub_removes_a_key_split_across_stream_deltas(tmp_path):
+    import scrub
+    folder = tmp_path / "split"
+    folder.mkdir()
+    head, tail = QRYPT_KEY[:20], QRYPT_KEY[20:]  # a 20 + 11 character split
+    lines = [{"type": "message", "role": "assistant", "content": f"export K={head}", "delta": True},
+             {"type": "message", "role": "assistant", "content": f"{tail} done", "delta": True}]
+    (folder / "transcript.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+    changed, leaked = scrub.scrub_folder(folder, [QRYPT_KEY])
+    text = (folder / "transcript.jsonl").read_text()
+    assert leaked == [] and len(changed) == 1
+    assert head not in text and tail not in text and text.count("<REDACTED>") == 2
+    # A piece alone is still reported if it cannot be removed.
+    assert scrub.has_fragment(tail.encode() + b"x", [QRYPT_KEY.encode()])
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file modes")

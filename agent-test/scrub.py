@@ -3,11 +3,14 @@
 
 In every file under the folder (workspace included; symlinks are not followed):
   1. each known secret value (the Qrypt key and the Gemini key) becomes <REDACTED>;
-  2. the value of any Authorization, X-API-Key or x-goog-api-key header (as `Name: value`,
+  2. outside workspace/ (the files that get committed), any piece of a secret at least
+     FRAGMENT_LEN characters long also becomes <REDACTED>. Gemini's stream-json can split one
+     value across two delta messages, which step 1 alone would miss;
+  3. the value of any Authorization, X-API-Key or x-goog-api-key header (as `Name: value`,
      `"Name": "value"` or `Name=value`) becomes <REDACTED>; an auth scheme word is kept
      (`Authorization: Bearer <REDACTED>`).
-Then the folder is scanned again. The exit status is 1 if a known secret value is still
-present anywhere (the report names files, never values).
+Then the folder is scanned again. The exit status is 1 if a known secret value (or, outside
+workspace/, a piece of one) is still present anywhere (the report names files, never values).
 
 Usage:
   scrub.py RUN_DIR [--qrypt-key-file F] [--gemini-key-file F]
@@ -22,6 +25,7 @@ import sys
 
 REDACTED = "<REDACTED>"
 MIN_SECRET_LEN = 4  # shorter values would garble ordinary text
+FRAGMENT_LEN = 8  # pieces this long of a 40-character random key never occur by chance
 MAX_FILE = 200 * 1024 * 1024
 DEFAULT_QRYPT_KEY = "~/.config/agentforge/qrypt_api_key"
 DEFAULT_GEMINI_KEY = "~/.config/agentforge/gemini_api_key"
@@ -36,10 +40,26 @@ HEADER_RE = re.compile(
     """)
 
 
-def scrub_bytes(data, secrets):
-    """Returns the scrubbed bytes. `secrets` are non-empty byte strings (longest first)."""
+def fragments(secrets):
+    """Every piece of every secret at least FRAGMENT_LEN long, longest first."""
+    out = {s[i:i + k] for s in secrets for k in range(FRAGMENT_LEN, len(s) + 1)
+           for i in range(len(s) - k + 1)}
+    return sorted(out, key=len, reverse=True)
+
+
+def has_fragment(data, secrets):
+    return any(s[i:i + FRAGMENT_LEN] in data for s in secrets
+               for i in range(len(s) - FRAGMENT_LEN + 1))
+
+
+def scrub_bytes(data, secrets, pieces=False):
+    """Returns the scrubbed bytes. `secrets` are non-empty byte strings (longest first).
+    With `pieces`, fragments of a secret are redacted too (see the module docstring)."""
     for secret in secrets:
         data = data.replace(secret, REDACTED.encode())
+    if pieces and has_fragment(data, secrets):
+        for piece in fragments(secrets):
+            data = data.replace(piece, REDACTED.encode())
 
     def repl(match):
         value = match.group(3)
@@ -52,7 +72,7 @@ def scrub_bytes(data, secrets):
 
 def scrub_text(text, secret_values):
     """str -> str version for notes and log lines."""
-    return scrub_bytes(text.encode("utf-8", "replace"), prepare(secret_values)).decode(
+    return scrub_bytes(text.encode("utf-8", "replace"), prepare(secret_values), pieces=True).decode(
         "utf-8", "replace")
 
 
@@ -71,6 +91,11 @@ def iter_files(root):
                 yield path
 
 
+def committed(folder, path):
+    """True unless the file is under the run's git-ignored workspace/."""
+    return pathlib.Path(path).relative_to(folder).parts[0] != "workspace"
+
+
 def scrub_folder(folder, secret_values):
     """Scrub in place; returns (files_changed, files_still_holding_a_secret)."""
     secrets = prepare(secret_values)
@@ -80,7 +105,7 @@ def scrub_folder(folder, secret_values):
             continue
         mode = path.stat().st_mode
         data = path.read_bytes()
-        clean = scrub_bytes(data, secrets)
+        clean = scrub_bytes(data, secrets, pieces=committed(folder, path))
         if clean != data:
             try:
                 path.write_bytes(clean)
@@ -92,7 +117,8 @@ def scrub_folder(folder, secret_values):
     for path in iter_files(folder):
         if path.stat().st_size <= MAX_FILE:
             data = path.read_bytes()
-            if any(secret in data for secret in secrets):
+            if any(secret in data for secret in secrets) or (
+                    committed(folder, path) and has_fragment(data, secrets)):
                 leaked.append(path)
     return changed, leaked
 
