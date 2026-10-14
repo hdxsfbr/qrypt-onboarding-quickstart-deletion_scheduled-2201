@@ -17,7 +17,7 @@ if (!token) fail("QRYPT_API_KEY is not set. Add QRYPT_API_KEY=<your key> to .env
 const url = process.env.QRYPT_API_URL ?? "https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1";
 const headers = { Accept: "application/json", Authorization: `Bearer ${token}`,
   "User-Agent": "qrypt-quickstart-node/1.0" };
-const res = await fetch(url, { headers })
+const res = await fetch(url, { headers, redirect: "manual" })
   .catch((e) => fail(`Could not reach Qrypt (${e.cause?.code ?? e.cause?.message ?? e.name}).`,
     "network"));
 const hint = HINTS[res.status] ?? (res.status >= 500 ? "try again shortly" : "unexpected response");

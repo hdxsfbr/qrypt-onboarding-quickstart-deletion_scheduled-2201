@@ -92,7 +92,7 @@ PRD.md  AGENT_READINESS.md  BACKLOG.md  backlog.csv  CLAIMS.md  AI_USAGE.md  REA
 - The AES-GCM nonce is 12 bytes from the OS CSPRNG. The tag is 16 bytes, the library default.
 
 **Rules:**
-- S1. Exactly one HTTP request per run. No retries, no loops.
+- S1. Exactly one HTTP request per run. No retries, no loops, and no redirects followed: Node uses `redirect: "manual"`, Python `allow_redirects=False`. A 3xx is a failure ("unexpected response"). Python treats only status 200 as success, because `r.ok` would accept 3xx.
 - S2. The request is `GET {QRYPT_API_URL or https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1}` with headers `Accept: application/json`, `Authorization: Bearer <key>`, and `User-Agent: qrypt-quickstart-node/1.0` or `qrypt-quickstart-python/1.0`.
 - S3. The key value has surrounding whitespace trimmed. An empty or missing key fails before any request (message `no-key`).
 - S4. Node only: if `process.loadEnvFile` is missing, fail with `runtime` before anything else.
@@ -158,6 +158,7 @@ Message contract (stderr). The tests assert these exact strings:
   - `ratelimit` returns 429 with an illustrative body and **no** `Retry-After`. This hasn't been observed live.
   - `error500` and `unavailable` return 500 and 503 with illustrative bodies.
   - `teapot` returns 418, to exercise the "unexpected response" path.
+  - `redirect` returns 302 with a `Location` pointing at the `ok` scenario, to prove S1 (no redirect followed).
   - `badjson` returns 200 with an HTML body (for P1 documentation tests only).
 - M5. Every request is recorded: method, path, query, headers with `Authorization` replaced by `Bearer <redacted>` or `<missing>`, and the status code. `GET /__requests` returns the records. `DELETE /__requests` clears them.
 - M6. Bodies marked illustrative carry a code comment `# illustrative: not observed live`. CLAIMS.md lists them.
@@ -387,6 +388,10 @@ Each test names the rule it covers.
 - T-s-14 (S6): an unresolvable host (`.invalid`). Exit 1, `network` message.
 - T-s-15 (S4, Node only): run with `process.loadEnvFile` deleted through `--import` of a stub. Exit 1, `runtime` message.
 - T-s-16 (P1): `badjson`. A non-zero exit is asserted, and the stack trace is accepted and documented.
+- T-s-18 (S1): `redirect`. Exit 1, `Qrypt returned HTTP 302: unexpected response.`, exactly 1 request.
+- T-s-19 (S7): the crypto calls are instrumented (a Python `sitecustomize` wrapper around `AESGCM`, a Node `--import` preload around `createCipheriv`/`createDecipheriv` plus `syncBuiltinESMExports`). The test asserts the AES key's SHA-256 equals that of mock bytes `[0, 32)`, the algorithm is AES-256-GCM, the IV or nonce is 12 bytes, and the plaintext is the fixed message. Only fingerprints are recorded, never key bytes.
+- T-s-20 (S7): the instrumentation forces a decrypted-plaintext mismatch. Exit 1, `AES-GCM round trip failed.`, `#round-trip`.
+- T-s-21 (S2): with no `QRYPT_API_URL`, the default URL literal in each snippet is exactly `https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1` (a static check, so no live call).
 - T-s-17 (S10, S11): every failure message ends with `Fix: <HELP>#<anchor>`, and `HELP` matches the site base URL in `site/hugo.toml`.
 
 **Lint** (`lint` job):

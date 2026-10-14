@@ -13,6 +13,7 @@ The scenario is the path prefix: /s/<scenario>/api/v1/quantum-entropy?size=<KiB>
   error500      500
   unavailable   503
   teapot        418
+  redirect      302, Location: this server's /s/ok/... URL (a snippet must not follow it)
   badjson       200 with an HTML body
 
 Order of checks (M2, M3, M4): Authorization header, then `size`, then scenario.
@@ -57,10 +58,11 @@ SCENARIOS = {
     "badjson": (200, "text/html",
                 "<html><body>not json</body></html>"),  # illustrative: not observed live
 }
-KNOWN = {"ok", *SCENARIOS}
+KNOWN = {"ok", "redirect", *SCENARIOS}
 
 PATH_RE = re.compile(r"^/s/(?P<scenario>[^/]+)/api/v1/quantum-entropy$")
-SIZE_RE = re.compile(r"^[0-9]+$")
+SIZE_RE = r"[0-9]+"
+OK_PATH = "/s/ok/api/v1/quantum-entropy?size=1"
 ADMIN_PATH = "/__requests"
 
 LOG = []
@@ -70,7 +72,9 @@ LOG_LOCK = threading.Lock()
 def parse_size(query):
     """Return the integer `size` (1..512), or None when it is missing or invalid (M3)."""
     values = parse_qs(query, keep_blank_values=True).get("size", [])
-    if len(values) != 1 or not SIZE_RE.match(values[0]):
+    # Full-string match (`$` would accept a trailing newline) and at most 3 digits, so a
+    # huge number never reaches int().
+    if len(values) != 1 or len(values[0]) > 3 or not re.fullmatch(SIZE_RE, values[0]):
         return None
     size = int(values[0])
     return size if 1 <= size <= 512 else None
@@ -132,6 +136,9 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps({"random": [BLOCK_B64] * size, "size": size},
                               separators=(",", ":"))
             return 200, "application/json", body, {"Cache-Control": "no-store"}
+        if scenario == "redirect":
+            where = f"http://{self.headers.get('Host') or '127.0.0.1'}{OK_PATH}"
+            return 302, "application/json", "", {"Location": where}
         status, ctype, body = SCENARIOS[scenario]
         return status, ctype, body, None
 

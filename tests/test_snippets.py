@@ -1,17 +1,18 @@
 """Contract tests for the quickstart snippets (docs/TDD.md section 2 rules S1-S13 and the
-message contract; test list T-s-1..17), run for Node and Python against mock/server.py.
+message contract; test list T-s-1..21), run for Node and Python against mock/server.py.
 
 Snippets come from SNIPPETS_DIR (default quickstart/). The only network traffic is the local
 mock, one refused loopback port (T-s-13) and one `.invalid` DNS lookup (T-s-14).
 """
 import base64
 import hashlib
+import json
 import re
 import subprocess
 
 import pytest
 
-from conftest import TEST_KEY, read_help
+from conftest import TEST_KEY, read_help, snippet_path
 
 SUCCESS = "✔ Generated a 256-bit AES key from Qrypt quantum entropy (AES-GCM round trip OK).\n"
 ENV_OK = f"QRYPT_API_KEY={TEST_KEY}\n"
@@ -148,6 +149,15 @@ def test_t_s_7_to_12_http_failure(lang, mock, run_snippet, scenario, status, hin
     assert req["status"] == status
 
 
+def test_t_s_18_redirect_is_not_followed(lang, mock, run_snippet):
+    """T-s-18 (S1): a 302 whose Location is the working `ok` URL is a failure, not a success,
+    and the redirect is not followed: the mock sees exactly one request."""
+    run = run_snippet(lang, ENV_OK, url=mock.url("redirect"))
+    assert_failure(run, lang, http_msg(302, HOTHER), "302")
+    (req,) = mock.requests()
+    assert (req["path"], req["status"]) == ("/s/redirect/api/v1/quantum-entropy", 302)
+
+
 # --- transport failures (S6) -----------------------------------------------------------
 
 
@@ -223,3 +233,120 @@ def test_t_s_17_every_failure_ends_with_the_fix_line(lang, mock, run_snippet, cl
         assert len(lines) == 2, (anchor, run.stderr)
         assert lines[0].startswith("✘ ")
         assert lines[-1] == f"  Fix: {help_url}#{anchor}", (anchor, run.stderr)
+
+
+# --- the crypto contract (S7) and the default URL (S2) ---------------------------------
+
+MESSAGE = b"Hello from Qrypt quantum entropy"
+SHA256 = lambda data: hashlib.sha256(data).hexdigest()  # noqa: E731
+DEFAULT_URL = "https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1"
+
+# Instrumentation, loaded before the snippet. It records only fingerprints (SHA-256 of the key
+# and of the plaintext, the algorithm, the IV length) to the JSON file named by FP_RECORD, and
+# with FP_MODE=mismatch makes decryption return a different plaintext.
+PY_HOOK = """
+import hashlib, json, os
+import cryptography.hazmat.primitives.ciphers.aead as aead
+
+REAL, REC, rec = aead.AESGCM, os.environ["FP_RECORD"], {}
+sha = lambda data: hashlib.sha256(bytes(data)).hexdigest()
+
+
+def save():
+    with open(REC, "w") as out:
+        json.dump(rec, out)
+
+
+class AESGCM:
+    def __init__(self, key):
+        rec.update(algorithm=f"aes-{len(key) * 8}-gcm", key_sha256=sha(key))
+        self.real = REAL(key)
+        save()
+
+    def encrypt(self, nonce, data, aad):
+        rec.update(iv_length=len(nonce), plaintext_sha256=sha(data))
+        save()
+        return self.real.encrypt(nonce, data, aad)
+
+    def decrypt(self, nonce, data, aad):
+        out = self.real.decrypt(nonce, data, aad)
+        return out + b"!" if os.environ.get("FP_MODE") == "mismatch" else out
+
+
+aead.AESGCM = AESGCM
+"""
+
+NODE_HOOK = """
+import crypto from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
+
+const rec = {}, real = { c: crypto.createCipheriv, d: crypto.createDecipheriv };
+const sha = (data) => crypto.createHash("sha256").update(data).digest("hex");
+const save = () => writeFileSync(process.env.FP_RECORD, JSON.stringify(rec));
+
+crypto.createCipheriv = (algorithm, key, iv, ...rest) => {
+  Object.assign(rec, { algorithm, key_sha256: sha(key), iv_length: iv.length });
+  const cipher = real.c(algorithm, key, iv, ...rest), update = cipher.update.bind(cipher);
+  cipher.update = (data, ...args) => {
+    rec.plaintext_sha256 = sha(typeof data === "string" ? Buffer.from(data, args[0]) : data);
+    save();
+    return update(data, ...args);
+  };
+  return cipher;
+};
+crypto.createDecipheriv = (...args) => {
+  const decipher = real.d(...args), update = decipher.update.bind(decipher);
+  decipher.update = (...a) => {
+    const out = update(...a);
+    return process.env.FP_MODE === "mismatch" ? Buffer.concat([out, Buffer.from("!")]) : out;
+  };
+  return decipher;
+};
+syncBuiltinESMExports();
+"""
+
+
+def run_instrumented(lang, mock, run_snippet, tmp_path, mode=""):
+    """Run the snippet against the `ok` scenario with the crypto instrumentation loaded.
+    Returns (run, record), where record is the dict of fingerprints (empty if none written)."""
+    hook = tmp_path / ("sitecustomize.py" if lang == "python" else "hook.mjs")
+    hook.write_text(PY_HOOK if lang == "python" else NODE_HOOK, encoding="utf-8")
+    record = tmp_path / "fingerprints.json"
+    env = {"FP_RECORD": str(record), "FP_MODE": mode}
+    if lang == "python":
+        env["PYTHONPATH"] = str(tmp_path)
+        run = run_snippet(lang, ENV_OK, env=env, url=mock.url("ok"))
+    else:
+        run = run_snippet(lang, ENV_OK, env=env, url=mock.url("ok"),
+                          node_args=["--import", hook.as_uri()])
+    text = record.read_text(encoding="utf-8") if record.exists() else "{}"
+    key = bytes(range(32))
+    assert key.hex() not in text and key.hex() not in run.stdout + run.stderr  # fingerprints only
+    return run, json.loads(text)
+
+
+def test_t_s_19_key_algorithm_iv_and_plaintext(lang, mock, run_snippet, tmp_path):
+    """T-s-19 (S7): the AES key is bytes [0, 32) of the block (the mock serves bytes 0..255
+    repeated), the algorithm is AES-256-GCM, the IV or nonce is 12 bytes, and the plaintext is
+    the fixed message. Only SHA-256 fingerprints are recorded, never key bytes."""
+    run, rec = run_instrumented(lang, mock, run_snippet, tmp_path)
+    assert (run.code, run.stdout, run.stderr) == (0, SUCCESS, "")
+    assert rec == {"algorithm": "aes-256-gcm", "key_sha256": SHA256(bytes(range(32))),
+                   "iv_length": 12, "plaintext_sha256": SHA256(MESSAGE)}
+
+
+def test_t_s_20_a_decryption_mismatch_fails_the_round_trip(lang, mock, run_snippet, tmp_path):
+    """T-s-20 (S7): when decryption returns a different plaintext, the snippet exits 1 with the
+    round-trip message instead of claiming success."""
+    run, rec = run_instrumented(lang, mock, run_snippet, tmp_path, mode="mismatch")
+    assert rec["plaintext_sha256"] == SHA256(MESSAGE)  # the instrumentation was active
+    assert_failure(run, lang, "AES-GCM round trip failed.", "round-trip")
+
+
+def test_t_s_21_default_url_literal(lang):
+    """T-s-21 (S2): with no QRYPT_API_URL the snippet calls the production URL. This is a static
+    check (no live call): the one api-eus literal is the fallback of QRYPT_API_URL."""
+    text = snippet_path(lang).read_text(encoding="utf-8")
+    assert text.count("api-eus.qrypt.com") == 1
+    assert re.search(rf'QRYPT_API_URL[^\n]*"{re.escape(DEFAULT_URL)}"', text), text

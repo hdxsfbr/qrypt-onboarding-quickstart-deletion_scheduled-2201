@@ -65,7 +65,7 @@ def test_t_mock_1_auth_is_checked_before_size_and_scenario(mock):
 
 
 @pytest.mark.parametrize("size", ["0", "513", "-1", "abc", "", "1.5", "1e2", "%201", "%2B1",
-                                  "99999"])
+                                  "99999", "1%0A", "9" * 5000], ids=lambda v: v[:12] or "empty")
 def test_t_mock_2_bad_size_is_400(mock, size):
     """T-mock-2 (M3): a size that is not an integer in 1..512 gives the live 400 body."""
     status, hdrs, body = get(mock, size=size)
@@ -123,6 +123,14 @@ def test_scenarios_with_illustrative_bodies(mock, scenario, status):
     assert hdrs["content-type"] == "application/json"
     assert list(json.loads(body)) == ["error"]
     assert "retry-after" not in hdrs
+
+
+def test_redirect_is_a_302_to_the_ok_scenario(mock):
+    """M4 `redirect`: 302 with a Location that points at this server's `ok` scenario."""
+    status, hdrs, _ = get(mock, "redirect")
+    assert status == 302
+    assert hdrs["location"] == f"{mock.base}/s/ok/api/v1/quantum-entropy?size=1"
+    assert get_path(mock, "/s/ok/api/v1/quantum-entropy?size=1")[0] == 200
 
 
 def test_badjson_is_a_200_that_is_not_json(mock):

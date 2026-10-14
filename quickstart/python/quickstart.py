@@ -30,11 +30,11 @@ url = os.getenv("QRYPT_API_URL", "https://api-eus.qrypt.com/api/v1/quantum-entro
 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}",
            "User-Agent": "qrypt-quickstart-python/1.0"}
 try:
-    r = requests.get(url, headers=headers, timeout=15)
+    r = requests.get(url, headers=headers, timeout=15, allow_redirects=False)
 except requests.RequestException as e:
     fail(f"Could not reach Qrypt ({type(e).__name__}).", "network")
 hint = HINTS.get(s := r.status_code, "try again shortly" if s >= 500 else "unexpected response")
-if not r.ok:
+if r.status_code != 200:
     fail(f"Qrypt returned HTTP {r.status_code}: {hint}.", r.status_code)
 
 # The first 32 bytes (256 bits) of the 1 KiB block become the key. Never reuse the rest.
