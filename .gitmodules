@@ -1,0 +1,3 @@
+[submodule "site/upstream"]
+	path = site/upstream
+	url = https://github.com/QryptInc/QryptInc.github.io

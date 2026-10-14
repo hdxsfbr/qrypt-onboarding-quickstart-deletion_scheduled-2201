@@ -11,3 +11,10 @@ site/assets/snippets/
 site/resources/
 agent-test/runs/*/workspace/
 .pip-cache/
+.tools/
+site/static/quickstart/files/
+site/.hugo_build.lock
+
+# Raw Lighthouse runs are large; commit summaries (and one chosen full report) explicitly.
+docs/evidence/lighthouse/**/run-*.json
+docs/evidence/lighthouse/**/lighthouse.log

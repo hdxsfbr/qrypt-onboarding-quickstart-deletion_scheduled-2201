@@ -22,7 +22,7 @@ USER_AGENT = {"node": "qrypt-quickstart-node/1.0", "python": "qrypt-quickstart-p
 NO_KEY = "QRYPT_API_KEY is not set. Add QRYPT_API_KEY=<your key> to .env."
 H401 = "Authorization header missing or malformed"
 H403 = "key rejected, or monthly entropy quota used up"
-H429 = "over 30 requests in 10 seconds; wait, then run once"
+H429 = "rate limit reached; wait about 15 seconds, then run once"
 H5XX = "try again shortly"
 HOTHER = "unexpected response"
 

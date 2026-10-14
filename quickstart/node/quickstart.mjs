@@ -6,7 +6,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 const HELP = "https://qrypt-quickstart.pages.dev/quickstart/troubleshooting/";
 const HINTS = { 401: "Authorization header missing or malformed",
   403: "key rejected, or monthly entropy quota used up",
-  429: "over 30 requests in 10 seconds; wait, then run once" };
+  429: "rate limit reached; wait about 15 seconds, then run once" };
 const fail = (msg, id) => { console.error(`✘ ${msg}\n  Fix: ${HELP}#${id}`); process.exit(1); };
 
 if (!process.loadEnvFile) fail(`Node.js 20.12+ required (found ${process.version}).`, "runtime");

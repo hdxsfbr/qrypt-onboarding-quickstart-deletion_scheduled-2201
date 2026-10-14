@@ -1,0 +1,16 @@
+{{- /* One inline stylesheet: Qrypt's theme CSS (read from the submodule, so nothing blocks
+       rendering), two IBM Plex Sans woff2 files with font-display: swap, then our section CSS.
+       Two files, not four: regular serves 400 and semibold serves 500 to 700. Both are preloaded
+       in qs-header. */ -}}
+{{- $dir := "upstream/themes/hugo-theme-learn/static/css/" -}}
+{{- $css := "" -}}
+{{- range slice "nucleus.css" "tags.css" "theme.css" "hugo-theme.css" -}}
+  {{- $css = print $css (readFile (print $dir .)) -}}
+{{- end -}}
+{{- $css = print $css (readFile (printf "upstream/static/css/theme-%s.css" site.Params.themeVariant)) -}}
+{{- $css = replace $css "@import \"tags.css\";" "" -}}
+{{- $css = replaceRE `(?s)@font-face\s*\{.*?\}` "" $css -}}
+{{- $css = replace $css "../images/" (relURL "images/") -}}
+{{- $face := `@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:%s;font-display:swap;src:url("%s") format("woff2")}` -}}
+{{- $faces := print (printf $face "400" (relURL "fonts/ibm-plex-sans-v14-latin-regular.woff2")) (printf $face "500 700" (relURL "fonts/ibm-plex-sans-v14-latin-600.woff2")) "html{font-synthesis:none}" -}}
+<style>{{ print $faces $css (partial "qs-css.html" .) | safeCSS }}</style>

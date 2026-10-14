@@ -1,0 +1,46 @@
+{{- /* The docs sidebar. Same markup and ordering as the upstream menu partial, minus the branches
+       that are switched off in the site config (search, languages, visited links) and with an
+       accessible name on the logo link. */ -}}
+{{- $currentNode := . -}}
+<nav id="sidebar">
+  <div id="header-wrapper">
+    <div id="header">
+      <a href="/" aria-label="Qrypt documentation home"> {{ partial "logo.html" . }} <span>Documentation</span></a>
+    </div>
+  </div>
+  <div class="highlightable">
+    <ul class="topics">
+      {{- range .Site.Home.Sections.ByWeight }}
+      {{ template "qs-section-tree-nav" dict "sect" . "currentnode" $currentNode }}
+      {{- end }}
+    </ul>
+    <section id="footer">{{ partial "menu-footer.html" . }}</section>
+  </div>
+</nav>
+
+{{ define "qs-section-tree-nav" }}
+{{- $currentNode := .currentnode -}}
+{{- $currentFileUniqueID := "" -}}
+{{- with $currentNode.File }}{{ $currentFileUniqueID = .UniqueID }}{{ end -}}
+{{- with .sect }}
+{{- if and .IsSection (not .Params.hidden) }}
+{{ safeHTML .Params.head }}
+<li data-nav-id="{{ .RelPermalink }}" title="{{ .Title }}" class="dd-item {{ if .IsAncestor $currentNode }}parent{{ end }} {{ if eq .File.UniqueID $currentFileUniqueID }}active{{ end }} {{ if .Params.alwaysopen }}parent{{ end }}">
+  <a href="{{ .RelPermalink }}">{{ safeHTML .Params.Pre }}{{ or .Params.menuTitle .LinkTitle .Title }}{{ safeHTML .Params.Post }}</a>
+  {{- $pages := .Pages | union .Sections -}}
+  {{- $visible := where $pages "Params.hidden" "ne" true -}}
+  {{- if $visible }}
+  <ul>
+    {{- range $visible.ByWeight }}
+    {{ template "qs-section-tree-nav" dict "sect" . "currentnode" $currentNode }}
+    {{- end }}
+  </ul>
+  {{- end }}
+</li>
+{{- else if not .Params.hidden }}
+<li data-nav-id="{{ .RelPermalink }}" title="{{ .Title }}" class="dd-item {{ if eq .File.UniqueID $currentFileUniqueID }}active{{ end }}">
+  <a href="{{ .RelPermalink }}">{{ safeHTML .Params.Pre }}{{ or .Params.menuTitle .LinkTitle .Title }}{{ safeHTML .Params.Post }}</a>
+</li>
+{{- end }}
+{{- end }}
+{{ end }}

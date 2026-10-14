@@ -1,0 +1,27 @@
+{{- /* {{< qs-tabs id="group" >}} {{% qs-tab name="Node.js" %}} … {{% /qs-tab %}} … {{< /qs-tabs >}}
+       WAI-ARIA tabs. Served without JavaScript, every panel is present and visible, stacked under
+       its heading (a <noscript> rule in qs-header drops the tab list). Until the inline script
+       in qs-script runs, CSS shows only the first panel; the script then marks the group, sets
+       `hidden` on inactive panels, handles the arrow keys and syncs groups via localStorage. */ -}}
+{{- $_ := .Inner -}}
+{{- $id := .Get "id" | default (printf "g%d" .Ordinal) -}}
+{{- $label := .Get "label" | default "Language" -}}
+{{- with .Store.Get "tabs" -}}
+<div class="qs-tabs" data-qs-tabs>
+  <div class="qs-tablist" role="tablist" aria-label="{{ $label }}">
+    {{- range $i, $t := . }}
+    {{- $slug := anchorize $t.name }}
+    <button type="button" role="tab" class="qs-tab" id="qs-{{ $id }}-tab-{{ $slug }}" aria-controls="qs-{{ $id }}-panel-{{ $slug }}" aria-selected="{{ cond (eq $i 0) "true" "false" }}" tabindex="{{ cond (eq $i 0) "0" "-1" }}" data-qs-lang="{{ $slug }}">{{ $t.name }}</button>
+    {{- end }}
+  </div>
+  {{- range $i, $t := . }}
+  {{- $slug := anchorize $t.name }}
+  <div role="tabpanel" class="qs-panel" tabindex="0" id="qs-{{ $id }}-panel-{{ $slug }}" aria-labelledby="qs-{{ $id }}-tab-{{ $slug }}">
+    <h3 class="qs-tab-heading">{{ $t.name }}</h3>
+    {{ $t.body }}
+  </div>
+  {{- end }}
+</div>
+{{- else -}}
+{{ errorf "qs-tabs %q has no qs-tab inside (%s)" $id .Position }}
+{{- end -}}

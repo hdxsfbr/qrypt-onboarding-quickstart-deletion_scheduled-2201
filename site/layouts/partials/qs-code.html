@@ -1,0 +1,30 @@
+{{- /* A highlighted code block with a copy button. Params: code, lang (Chroma lexer), label (shown
+       and used in the button name; derived from lang if empty), file (optional download name). */ -}}
+{{- $lang := .lang | default "text" -}}
+{{- $labels := dict "bash" "Shell" "sh" "Shell" "shell" "Shell" "zsh" "Shell" "console" "Shell" "powershell" "PowerShell" "pwsh" "PowerShell" "ps1" "PowerShell" "js" "JavaScript" "javascript" "JavaScript" "node" "Node.js" "python" "Python" "py" "Python" "json" "JSON" "ini" ".env" "dotenv" ".env" "env" ".env" "text" "Text" -}}
+{{- $label := .label | default (index $labels $lang) | default (title $lang) -}}
+{{- /* Chroma's github style, with two changes: the block sits on Qrypt's #f1f1f1 (what the theme
+       paints behind <pre> anyway) and every token color is at least 4.5:1 on it. Of the github
+       style's colors, only these fall short; each is mapped to the nearest color that passes. */ -}}
+{{- $html := transform.Highlight .code $lang "style=github" | string -}}
+{{- $html = replace $html "background-color:#f7f7f7" "background-color:#f1f1f1" -}}
+{{- $html = replace $html ` tabindex="0"` "" -}}
+{{- $html = replace $html "color:#f6f8fa;background-color:#82071e" "color:#82071e;background-color:#f1f1f1" -}}
+{{- range $from, $to := dict "#6a737d" "#57606a" "#7f7f7f" "#57606a" "#fff" "#1f2328" -}}
+  {{- range slice `"` ";" -}}
+    {{- $html = replace $html (print "color:" $from .) (print "color:" $to .) -}}
+  {{- end -}}
+{{- end -}}
+<div class="qs-code">
+  <div class="qs-bar">
+    <span class="qs-lang">{{ $label }}</span>
+    <span class="qs-actions">
+      {{- with .file }}
+      <a class="qs-dl" href="{{ printf "quickstart/files/%s" . | relURL }}" download>Download {{ . }}</a>
+      {{- end }}
+      <span class="qs-status" aria-live="polite"></span>
+      <button type="button" class="qs-copy" aria-label="Copy {{ $label }} code">Copy</button>
+    </span>
+  </div>
+  {{ $html | safeHTML }}
+</div>

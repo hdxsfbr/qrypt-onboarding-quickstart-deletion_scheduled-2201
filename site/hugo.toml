@@ -1,0 +1,95 @@
+# Qrypt developer quickstart: Hugo project.
+#
+# The visual shell is Qrypt's docs (git submodule site/upstream, QryptInc/QryptInc.github.io at
+# a88e74cf9c, never edited). Everything below the "Upstream settings" block is copied from their
+# config.toml unchanged. Everything in the "Quickstart additions" block is ours. The Quickstart
+# section's own templates live in layouts/quickstart/ and layouts/partials/qs-*.
+
+# --- Upstream settings (copied from site/upstream/config.toml) -------------------------------
+# baseURL is the deploy default; scripts/build_site.py overrides it with --baseURL.
+baseURL = 'https://qrypt-quickstart.pages.dev/'
+relativeURLs = true
+languageCode = 'en-us'
+title = 'Qrypt'
+theme = "hugo-theme-learn"
+# Quickstart addition: the theme lives in the submodule (see the additions block below).
+themesDir = "upstream/themes"
+# publishDir is not set: scripts/build_site.py passes --destination.
+
+[params]
+    themeVariant = "mine"
+    disableLandingPageButton = true
+    disableNextPrev = true
+    disableLandingPage = true
+    disableShortcutsTitle = true
+    disableSearch = true
+
+[outputs]
+    # Upstream: home = ["HTML", "RSS", "JSON"]. We append LLMS (see the additions block).
+    home = [ "HTML", "RSS", "JSON", "LLMS" ]
+
+[[menu.shortcuts]]
+    name = '<div class=link-container><svg height=16px width=16px xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390.01 388.4"><path d="m257.37 241.66 122.43 122.43-23.22 23.26-125.39-125.44 18.59 71.67-31.82 8.25-16.67-64.16-29.63 110.73-31.73-8.51 30.77-114.96-111.04 111.03-23.26-23.22 109.59-109.59-97.06 24.96-8.16-31.86 100.16-25.75-140.93-37.75 8.51-31.73 139.01 37.23-45.96-45.96 23.22-23.22 44.26 44.25-37.67-145.07 31.82-8.25 38.62 148.74 25.1-93.79 31.77 8.51-24.52 91.52 111.59-111.6 23.23 23.27-114.7 114.69 127.53-32.77 8.2 31.81-119.63 30.77 85.76 22.96-8.51 31.73z" fill="currentColor" style="fill: currentColor;"/></svg>&nbspQrypt Website </div>'
+    identifier = "ws"
+    url = "https://www.qrypt.com/"
+    weight = 1
+[[menu.shortcuts]]
+    name = "<i class='fab fa-github'></i> Github Repo"
+    identifier = "gh"
+    url = "https://github.com/QryptInc/QryptInc.github.io"
+    weight = 3
+
+# --- Quickstart additions (ours) ---------------------------------------------------------------
+# Composition: Hugo module mounts. Their content, static files (minus CNAME), layouts and theme
+# sit under site/upstream; ours sit next to them. Our files never shadow an upstream path.
+# Note: Hugo has no mount target for themes, so the theme directory is set with themesDir
+# (a top-level key, therefore declared above the first table).
+
+[module]
+  [[module.mounts]]
+    source = "upstream/content"
+    target = "content"
+  [[module.mounts]]
+    source = "content"
+    target = "content"
+  [[module.mounts]]
+    source = "upstream/static"
+    target = "static"
+    files = ["! CNAME", "**"]
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+  [[module.mounts]]
+    source = "upstream/layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+
+# /llms.txt (home) and /quickstart/index.md (the quickstart section): plain-Markdown renderings
+# of the Quickstart pages. notAlternative keeps them out of every page's <head>.
+[mediaTypes]
+  [mediaTypes."text/markdown"]
+    suffixes = ["md"]
+
+[outputFormats]
+  [outputFormats.LLMS]
+    mediaType = "text/plain"
+    baseName = "llms"
+    isPlainText = true
+    notAlternative = true
+  [outputFormats.QSMD]
+    mediaType = "text/markdown"
+    baseName = "index"
+    isPlainText = true
+    notAlternative = true
+
+# Only the Quickstart section gets the Markdown rendering.
+[[cascade]]
+  outputs = ["HTML", "QSMD"]
+  [cascade._target]
+    path = "/quickstart"
+    kind = "section"
