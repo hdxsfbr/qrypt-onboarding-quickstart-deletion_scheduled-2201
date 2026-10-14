@@ -76,6 +76,8 @@ secrets:
 
 pages:
   stage: deploy
+  # GitLab 17.9+ marks Pages jobs explicitly; the job name alone may not trigger a deployment.
+  pages: true
   image: python:3.13.15-slim-bookworm
   needs: [lint, test-python, test-node, secrets]
   rules:
