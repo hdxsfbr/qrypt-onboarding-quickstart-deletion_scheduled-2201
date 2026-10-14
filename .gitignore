@@ -1,0 +1,13 @@
+.env
+.venv/
+venv*/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+public/
+site/public/
+site/assets/snippets/
+site/resources/
+agent-test/runs/*/workspace/
+.pip-cache/
