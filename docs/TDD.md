@@ -29,6 +29,13 @@ Create any agent API key yourself and store it under `~/.config/agentforge/`. I 
 
 ---
 
+### Decision log (after sign-off)
+
+- 2026-10-14. **Wave 1 review leftovers accepted as is** (Andre). Python treats only HTTP 200 as success (S1). T-s-19 doesn't prove nonce freshness or OS origin. T-s-21 checks the default URL statically rather than intercepting a request.
+- 2026-10-14. **Workflow.** `main` is protected: no direct pushes, merges by maintainers only, and only when the pipeline succeeds and all discussions are resolved. Each wave lives on a `wave-N` branch and reaches `main` through a merge request, after Codex pass 2 and Andre's go-ahead. Wave 1 reached `main` by direct pushes before this rule existed.
+
+---
+
 ## 1. Architecture
 
 ```
@@ -249,6 +256,44 @@ Message contract (stderr). The tests assert these exact strings:
 **Out of scope:** search, dark mode, analytics (P2), editing or restyling their pages, and other languages for the docs.
 
 ---
+
+### 4.1 Wave 2 interface contract (between the site agents)
+
+**Build entry point:** `scripts/build_site.py [--out site/public] [--base-url URL] [--upstream-only]`.
+- **Hugo:** downloads Hugo 0.154.5 (linux-amd64, SHA-256 checked against the release checksums file) into `.tools/hugo-0.154.5/` unless it's already there. Override with `HUGO=/path/to/hugo`.
+- **Snippet copies:** copies `quickstart/node/quickstart.mjs`, `quickstart/python/quickstart.py`, `quickstart/python/requirements.txt` and `.env.example` into both `site/assets/snippets/` (for rendering) and `site/static/quickstart/files/` (for download). Both locations are generated and gitignored.
+- **Build:** `hugo --minify`. The default base URL is `https://qrypt-quickstart.pages.dev/`.
+- **`--upstream-only`:** builds the unmodified upstream shell (for T-site-3).
+- Exits non-zero on any Hugo `ERROR`.
+
+**Shortcodes** (signatures are fixed; the content agent uses only these):
+
+| Shortcode | Renders |
+|---|---|
+| `{{< qs-snippet lang="node" >}}` / `lang="python"` | The full snippet file from `assets/snippets/`, highlighted (S/W6), with a copy button and a download link to `/quickstart/files/<file>` |
+| `{{< qs-tabs id="<group>" >}} … {{< /qs-tabs >}}` containing `{{% qs-tab name="Node.js" %}} … {{% /qs-tab %}}` and `{{% qs-tab name="Python" %}} … {{% /qs-tab %}}` | WAI-ARIA tabs (W7). The tab content is Markdown. All tab groups on a page share the selected language (one `localStorage` key, `qs-lang`). |
+| `{{% qs-note kind="info|warning" title="…" %}} … {{% /qs-note %}}` | A callout with a heading, no icon fonts |
+
+Every fenced code block in our section gets a copy button from the section's render hook (W8). Fences may carry `{test="true"}`, which is ignored by rendering and read by `tests/test_docs_commands.py`.
+
+**Pages and anchors** (the content agent owns the text, the template agent owns the chrome):
+- `site/content/quickstart/_index.md`: the one path (W5, W10, W11).
+- `site/content/quickstart/troubleshooting.md`: every anchor in W12. Anchors are explicit heading IDs, for example `## HTTP 403 {#403}`.
+- `/llms.txt` and `/quickstart/index.md`: plain-text and Markdown output formats rendered from both pages, with snippets inlined verbatim.
+
+**Documented commands** (W14):
+- Shell blocks marked `{test="true"}` run under `sh` in a clean temp dir. Before running, the test rewrites `https://qrypt-quickstart.pages.dev/` to the local build's URL and sets `QRYPT_API_URL` to the mock.
+- PowerShell variants (D16) are limited to creating `.env` and running the snippet. They are marked `{test="pwsh"}` and are run by `scripts/ci_checks.sh docs-pwsh` in the pinned `mcr.microsoft.com/powershell` image, outside the default hook, checking only the `.env` they produce.
+
+**CI:**
+- A new `site` job (stage `test`) runs `scripts/ci_checks.sh site`, which builds the site, then runs `pytest -m site` and `pytest -m docs`.
+- The `deploy` job uses the `site` job's `site/public` artifact instead of the placeholder.
+- `scripts/ci_checks.sh local` includes `site`.
+
+**Claims tracking (E2):** every factual statement about Qrypt in our pages is recorded as it's written, in `docs/claims_wave2.csv` (`page, claim, source_type, source, ai_drafted, corrected`). Allowed sources:
+- docs.qrypt.com at commit `a88e74cf9c`
+- the portal, with an observation date
+- live probes recorded in `docs/POV.md` and `docs/evidence/`
 
 ## 5. CI and deploy (`.gitlab-ci.yml`)
 
