@@ -83,7 +83,10 @@ def prepare(secret_values):
 
 
 def iter_files(root):
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    def fail(err):
+        raise err  # an unreadable folder must not pass as clean
+
+    for dirpath, dirnames, filenames in os.walk(root, onerror=fail, followlinks=False):
         dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
         for name in filenames:
             path = pathlib.Path(dirpath, name)
@@ -102,7 +105,7 @@ def scrub_folder(folder, secret_values):
     changed = []
     for path in iter_files(folder):
         if path.stat().st_size > MAX_FILE:
-            continue
+            continue  # reported by the scan below
         mode = path.stat().st_mode
         data = path.read_bytes()
         clean = scrub_bytes(data, secrets, pieces=committed(folder, path))
@@ -115,7 +118,10 @@ def scrub_folder(folder, secret_values):
             changed.append(path)
     leaked = []
     for path in iter_files(folder):
-        if path.stat().st_size <= MAX_FILE:
+        if path.stat().st_size > MAX_FILE:
+            if committed(folder, path):
+                leaked.append(path)  # too big to check, so it must not be committed unchecked
+        else:
             data = path.read_bytes()
             if any(secret in data for secret in secrets) or (
                     committed(folder, path) and has_fragment(data, secrets)):

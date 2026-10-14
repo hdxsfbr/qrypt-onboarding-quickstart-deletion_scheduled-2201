@@ -12,7 +12,7 @@ const fail = (msg, id) => { console.error(`✘ ${msg}\n  Fix: ${HELP}#${id}`); p
 if (!process.loadEnvFile) fail(`Node.js 20.12+ required (found ${process.version}).`, "runtime");
 try { process.loadEnvFile(); } catch { /* no .env file: the next check explains */ }
 const token = process.env.QRYPT_API_KEY?.trim();
-if (!token) fail("QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env.", "no-key");
+if (!token) fail("Set QRYPT_API_KEY=<key> in .env. Get a key at portal.qrypt.com.", "no-key");
 
 const url = process.env.QRYPT_API_URL ?? "https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1";
 const headers = { Accept: "application/json", Authorization: `Bearer ${token}`,

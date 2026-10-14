@@ -24,7 +24,7 @@ def fail(msg, anchor):
 load_dotenv()
 token = os.getenv("QRYPT_API_KEY", "").strip()
 if not token:
-    fail("QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env.", "no-key")
+    fail("Set QRYPT_API_KEY=<key> in .env. Get a key at portal.qrypt.com.", "no-key")
 
 url = os.getenv("QRYPT_API_URL", "https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1")
 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}",

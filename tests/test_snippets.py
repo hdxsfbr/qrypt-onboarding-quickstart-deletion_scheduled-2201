@@ -19,7 +19,7 @@ ENV_OK = f"QRYPT_API_KEY={TEST_KEY}\n"
 USER_AGENT = {"node": "qrypt-quickstart-node/1.0", "python": "qrypt-quickstart-python/1.0"}
 
 # The message contract (TDD section 2), without the leading "✘ " and the trailing period.
-NO_KEY = "QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env."
+NO_KEY = "Set QRYPT_API_KEY=<key> in .env. Get a key at portal.qrypt.com."
 H401 = "key expired or malformed; create a new one at portal.qrypt.com"
 H403 = "key rejected, or monthly entropy quota used up"
 H429 = "rate limit reached; wait about 15 seconds, then run once"

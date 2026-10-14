@@ -6,7 +6,7 @@ Every error the quickstart script prints ends with a `Fix:` link to a section on
 
 | If you see | Go to |
 |---|---|
-| `QRYPT_API_KEY is not set` | [No key](#no-key) |
+| `Set QRYPT_API_KEY=<key> in .env` | [No key](#no-key) |
 | `Node.js 20.12+ required` | [Runtime version](#runtime) |
 | `Could not reach Qrypt` | [Network](#network) |
 | `HTTP 400` | [400](#400) |
@@ -20,9 +20,9 @@ Every error the quickstart script prints ends with a `Fix:` link to a section on
 | A stack trace instead of a `✘` line | [Stack trace](#malformed) |
 | Any other message | [Other](#other) |
 
-## QRYPT_API_KEY is not set {#no-key}
+## No key set {#no-key}
 
-**You see:** `✘ QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env.`
+**You see:** `✘ Set QRYPT_API_KEY=<key> in .env. Get a key at portal.qrypt.com.`
 
 **Likely cause:** The script found no key. The usual reasons:
 - You ran it from a folder that has no `.env` file. See [.env missing, or wrong folder](#env-file).
@@ -69,7 +69,9 @@ If that fails too, fix your network, VPN or firewall. If it prints `401` but the
 
 **You see:** `✘ Qrypt returned HTTP 401: key expired or malformed; create a new one at portal.qrypt.com.`
 
-**Likely cause:** Qrypt's FAQ says an expired access token returns 401. The live API also sends a 401 when the `Authorization` header is missing or malformed, with the body `{"error":"Missing or malformed Authorization header (expected 'Bearer <token>')"}`. The script never sends an empty key, so with the unmodified script an expired key is the likely cause.
+**Likely cause:** One of two things:
+- The key has expired. Qrypt's FAQ says an expired access token returns 401. We have not seen this live.
+- The `Authorization` header was missing or malformed. On 2026-10-13 the live API answered this with `{"error":"Missing or malformed Authorization header (expected 'Bearer <token>')"}`. With Python, a [`~/.netrc` entry](#netrc) can replace the header.
 
 A wrong key does not return 401. It returns 403. See [HTTP 403](#403).
 
@@ -208,7 +210,7 @@ Both mean "not now", but they have different causes and different fixes.
 
 ## .env missing, or wrong folder {#env-file}
 
-**You see:** `QRYPT_API_KEY is not set`, even though you saved the key.
+**You see:** `Set QRYPT_API_KEY=<key> in .env`, even though you saved the key.
 
 **Likely cause:** The two scripts look for `.env` in different places.
 - **Node.js** reads `.env` from the folder you run the command in.

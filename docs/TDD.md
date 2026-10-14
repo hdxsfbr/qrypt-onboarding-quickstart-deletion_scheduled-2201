@@ -118,7 +118,7 @@ Message contract (stderr). The tests assert these exact strings:
 
 | Anchor | Message |
 |---|---|
-| `no-key` | `QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env.` |
+| `no-key` | `Set QRYPT_API_KEY=<key> in .env. Get a key at portal.qrypt.com.` |
 | `runtime` | `Node.js 20.12+ required (found <process.version>).` |
 | `network` | `Could not reach Qrypt (<detail>).` |
 | `<status>` | `Qrypt returned HTTP <status>: <hint>.` The hints are: 401 `key expired or malformed; create a new one at portal.qrypt.com`, 403 `key rejected, or monthly entropy quota used up`, 429 `rate limit reached; wait about 15 seconds, then run once` (changed 2026-10-14: the live API returned 429 on back-to-back requests, far below the documented 30 per 10 s; see POV E16), 5xx `try again shortly`, otherwise `unexpected response`. |

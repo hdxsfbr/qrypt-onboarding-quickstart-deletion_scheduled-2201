@@ -196,6 +196,30 @@ def test_a5_scrub_removes_a_key_split_across_stream_deltas(tmp_path):
     assert scrub.has_fragment(tail.encode() + b"x", [QRYPT_KEY.encode()])
 
 
+def test_a5_scrub_fails_closed_on_files_it_cannot_check(tmp_path, monkeypatch):
+    import scrub
+    folder = tmp_path / "big"
+    (folder / "workspace").mkdir(parents=True)
+    (folder / "log.txt").write_text("no secret here\n")
+    (folder / "workspace" / "blob.bin").write_text("no secret here\n")
+    monkeypatch.setattr(scrub, "MAX_FILE", 4)
+    _, leaked = scrub.scrub_folder(folder, [QRYPT_KEY])
+    assert leaked == [folder / "log.txt"]  # workspace/ is git-ignored, so only log.txt counts
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file modes")
+def test_a5_scrub_fails_on_an_unreadable_folder(tmp_path):
+    import scrub
+    folder = tmp_path / "locked"
+    (folder / "sub").mkdir(parents=True)
+    (folder / "sub").chmod(0)
+    try:
+        with pytest.raises(PermissionError):
+            scrub.scrub_folder(folder, [QRYPT_KEY])
+    finally:
+        (folder / "sub").chmod(0o755)
+
+
 @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file modes")
 def test_a5_unwritable_file_with_a_secret_fails(tmp_path):
     import scrub
