@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": true,
+  "b": false,
+  "c": true,
+  "d": true,
+  "e": true,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "skipped-env",
+ "notes": [
+  "rerun failed: exit 1, no fresh 200 from the entropy endpoint; entrypoint node quickstart.mjs (cwd /qrypt-key-gen, from single-file); agent left no .env file"
+ ],
+ "harness_error": null
+}

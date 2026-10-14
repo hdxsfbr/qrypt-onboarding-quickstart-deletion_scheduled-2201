@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": false,
+  "b": false,
+  "c": true,
+  "d": true,
+  "e": true,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "other",
+ "notes": [
+  "rerun not run: no 200 from Qrypt to re-run; agent left no .env file; no Qrypt call, but local randomness in quickstart.mjs"
+ ],
+ "harness_error": null
+}
