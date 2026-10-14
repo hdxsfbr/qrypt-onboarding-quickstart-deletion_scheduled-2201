@@ -1,0 +1,6 @@
+README.md
+__pycache__/ (contents not listed)
+qrypt_key_generator.py
+requirements.txt
+test_qrypt_key_generator.py
+venv/ (contents not listed)

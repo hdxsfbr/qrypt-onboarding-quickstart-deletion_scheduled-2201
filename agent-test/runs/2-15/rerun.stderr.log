@@ -1,0 +1,2 @@
+✘ QRYPT_API_KEY is not set. Add QRYPT_API_KEY=<your key> to .env.
+  Fix: https://qrypt-quickstart.pages.dev/quickstart/troubleshooting/#no-key

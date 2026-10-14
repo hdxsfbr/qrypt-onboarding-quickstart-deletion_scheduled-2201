@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": false,
+  "b": false,
+  "c": true,
+  "d": true,
+  "e": true,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "invented-sdk",
+ "notes": [
+  "rerun not run: no 200 from Qrypt to re-run; 1 other 64-hex/44-char base64 string(s) in output: manual review; agent left no .env file"
+ ],
+ "harness_error": null
+}

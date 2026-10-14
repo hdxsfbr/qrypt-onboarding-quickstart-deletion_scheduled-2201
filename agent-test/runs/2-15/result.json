@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": true,
+  "b": false,
+  "c": false,
+  "d": true,
+  "e": true,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "key-printed",
+ "notes": [
+  "rerun failed: exit 1, no fresh 200 from the entropy endpoint; entrypoint node quickstart.mjs (cwd /qrypt-quickstart, from single-file); Qrypt key value appears in the transcript or program output; agent left no .env file"
+ ],
+ "harness_error": null
+}

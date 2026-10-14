@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": true,
+  "b": true,
+  "c": false,
+  "d": true,
+  "e": false,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "key-printed",
+ "notes": [
+  "entrypoint node quickstart.mjs (cwd /qrypt-quickstart, from single-file); Qrypt key found in workspace files: qrypt-quickstart/.env; Qrypt key value appears in the transcript or program output; agent left no .env file"
+ ],
+ "harness_error": null
+}
