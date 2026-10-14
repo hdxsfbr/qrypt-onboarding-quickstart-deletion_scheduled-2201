@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="{{ .Page.Language | default "en" }}" class="js csstransforms3d">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    {{ hugo.Generator }}
+    {{ partial "meta.html" . }}
+    {{ partial "favicon.html" . }}
+    <title>{{ .Title }} {{ default "::" .Site.Params.titleSeparator }} {{ .Site.Title }}</title>
+    {{- range slice "regular" "600" }}
+    <link rel="preload" href="{{ printf "fonts/ibm-plex-sans-v14-latin-%s.woff2" . | relURL }}" as="font" type="font/woff2" crossorigin>
+    {{- end }}
+    {{ partialCached "qs-style.html" . }}
+    <noscript><style>.qs-tablist,.qs-copy,.qs-status{display:none}.qs-tab-heading{display:block}.qs-tabs .qs-panel{display:block!important}</style></noscript>
+  </head>
+
+  <body class="" data-url="{{ .RelPermalink }}">
+    <a class="qs-skip" href="#body-inner">Skip to content</a>
+    {{ partial "qs-menu.html" . }}
+    <section id="body">
+      <div id="overlay"></div>
+      <div class="padding highlightable">
+        <span id="sidebar-toggle-span" class="custom-sidebar-toggle">
+          <a href="#" id="sidebar-toggle" role="button" aria-label="Toggle navigation">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+          </a>
+        </span>
+        <main id="body-inner">
+          {{- if and (not .IsHome) (not .Params.chapter) }}
+          <h1>{{ .Title }}</h1>
+          {{- end }}

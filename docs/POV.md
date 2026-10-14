@@ -154,6 +154,12 @@ This shifts the Q17 calculus somewhat. `eaas-aws` gives one API shape for both c
 - It goes on the troubleshooting page and into the agent failure taxonomy.
 - It is a strong backlog item for Qrypt: whitelist the API paths, or return a distinguishable error.
 
+**E16: the live rate limit is far tighter than documented (2026-10-14).** The docs say 30 requests per 10 seconds per token. During the live benchmark, `api-eus` returned **429** on the *second* successful-path request, about 1 second after the first (Node run, then Python run). `eaas-aws` behaved the same way earlier (429 after about 3 requests in 2 seconds). With 15 seconds between requests, 10 of 10 runs succeeded. There's no `Retry-After` header. The exact limit is unknown, and we won't probe for it. Consequences:
+- The snippets' 429 hint must not assert "30 requests in 10 seconds".
+- The troubleshooting page should say "wait about 15 seconds".
+- The agent-test harness must expect quick retries to hit 429.
+- It's a strong backlog item: document the real limit, or send `Retry-After`.
+
 **E14: a typo in the path on `api-eus` returns 530 (Cloudflare Tunnel error 1033), not 404.** Confusing for developers. It goes on the troubleshooting page.
 
 Live usage so far: 3,328 B, logged in `docs/evidence/usage.csv`. That includes Andre's portal-sample curl, estimated at 160 B.

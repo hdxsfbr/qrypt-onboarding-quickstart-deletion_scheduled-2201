@@ -1,0 +1,10 @@
+{{- /* {{% qs-note kind="info|warning" title="…" %}} Markdown {{% /qs-note %}}: a callout. The config
+       line below makes Hugo hand .Inner over as rendered HTML and emit this template's output
+       as-is, so the wrapper element survives (otherwise the Markdown pass drops raw HTML). */ -}}
+{{- $_hugo_config := `{ "version": 1 }` -}}
+{{- $kind := .Get "kind" | default "info" -}}
+{{- if not (in (slice "info" "warning") $kind) }}{{ errorf "qs-note: kind must be info or warning, got %q (%s)" $kind .Position }}{{ end -}}
+<div class="qs-note qs-note-{{ $kind }}" role="note">
+  {{- with .Get "title" }}<p class="qs-note-title">{{ . }}</p>{{ end }}
+  {{ .Inner }}
+</div>

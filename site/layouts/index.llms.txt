@@ -1,0 +1,2 @@
+{{- /* /llms.txt: the Quickstart pages as plain Markdown, snippets inlined verbatim. */ -}}
+{{- with site.GetPage "/quickstart" }}{{ partial "qs-markdown.txt" . }}{{ end -}}

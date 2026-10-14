@@ -1,0 +1,57 @@
+<script>
+(function () {
+  var d = document, K = "qs-lang";
+  function all(s, r) { return [].slice.call((r || d).querySelectorAll(s)); }
+  function select(t, focus) {
+    all("[role=tab]", t.closest("[data-qs-tabs]")).forEach(function (b) {
+      var on = b === t;
+      b.setAttribute("aria-selected", on);
+      b.tabIndex = on ? 0 : -1;
+      d.getElementById(b.getAttribute("aria-controls")).hidden = !on;
+    });
+    if (focus) t.focus();
+  }
+  function pick(lang, src, focus) {
+    all("[data-qs-tabs]").forEach(function (g) {
+      var t = all("[role=tab]", g).filter(function (b) { return b.dataset.qsLang === lang; })[0];
+      if (t) select(t, focus && g === src);
+    });
+  }
+  all("[data-qs-tabs]").forEach(function (g) {
+    g.classList.add("qs-js");
+    select(all("[role=tab]", g)[0]);
+  });
+  try { var saved = localStorage.getItem(K); if (saved) pick(saved); } catch (e) {}
+  all("[role=tab]").forEach(function (b) {
+    function go(t) {
+      var g = t.closest("[data-qs-tabs]");
+      pick(t.dataset.qsLang, g, true);
+      try { localStorage.setItem(K, t.dataset.qsLang); } catch (e) {}
+    }
+    b.addEventListener("click", function () { go(b); });
+    b.addEventListener("keydown", function (e) {
+      var l = all("[role=tab]", b.parentNode), i = l.indexOf(b), n = l.length;
+      var j = { ArrowRight: (i + 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
+      if (j === undefined) return;
+      e.preventDefault();
+      go(l[j]);
+    });
+  });
+  all(".qs-copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var box = b.closest(".qs-code"), code = box.querySelector("code"), s = box.querySelector(".qs-status");
+      function say(m, ms) { s.textContent = m; setTimeout(function () { s.textContent = ""; }, ms); }
+      function manual() {
+        var r = d.createRange(), sel = getSelection();
+        r.selectNodeContents(code); sel.removeAllRanges(); sel.addRange(r);
+        say("Selected. Press Ctrl+C", 4000);
+      }
+      if (!navigator.clipboard) return manual();
+      navigator.clipboard.writeText(code.textContent).then(function () { say("Copied", 2000); }, manual);
+    });
+  });
+  function menu(e) { e.preventDefault(); d.body.classList.toggle("sidebar-hidden"); }
+  d.getElementById("sidebar-toggle").addEventListener("click", menu);
+  d.getElementById("overlay").addEventListener("click", menu);
+})();
+</script>

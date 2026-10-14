@@ -1,0 +1,20 @@
+{{- /* {{< qs-snippet lang="node|python" >}}: the whole quickstart file from assets/snippets/ (copied
+       there from quickstart/ by scripts/build_site.py), highlighted, with a copy button and a link
+       to the downloadable copy. Inside a qs-tab it emits a fenced block instead, because Hugo
+       strips raw HTML from the inner content of a Markdown shortcode; the fence goes through the
+       same code-block render hook and renders identically. */ -}}
+{{- $lang := .Get "lang" -}}
+{{- $spec := dict "node" (dict "file" "quickstart.mjs" "lexer" "js" "label" "Node.js") "python" (dict "file" "quickstart.py" "lexer" "python" "label" "Python") -}}
+{{- $s := index $spec $lang -}}
+{{- if not $s }}{{ errorf "qs-snippet: lang must be node or python, got %q (%s)" $lang .Position }}{{ end -}}
+{{- $r := resources.Get (print "snippets/" $s.file) -}}
+{{- if not $r }}{{ errorf "qs-snippet: assets/snippets/%s is missing; run scripts/build_site.py (%s)" $s.file .Position }}{{ end -}}
+{{- if .Parent -}}
+{{- /* The fence is longer than any run of backticks the file could hold. */ -}}
+{{ "\n" }}`````{{ $s.lexer }} {label="{{ $s.label }}" file="{{ $s.file }}"}
+{{ $r.Content | safeHTML }}
+`````
+{{ "\n" }}
+{{- else -}}
+{{ partial "qs-code.html" (dict "code" $r.Content "lang" $s.lexer "label" $s.label "file" $s.file) }}
+{{- end -}}

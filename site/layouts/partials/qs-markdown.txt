@@ -1,0 +1,29 @@
+{{- /* Plain-Markdown rendering of the Quickstart section: the section page, then its pages in
+       weight order. Shortcodes become plain Markdown, and the two snippet shortcodes are replaced
+       by the file contents read from assets/snippets/. Takes the section page. */ -}}
+{{- $base := strings.TrimSuffix "/" site.BaseURL -}}
+{{- $node := (resources.Get "snippets/quickstart.mjs").Content -}}
+{{- $python := (resources.Get "snippets/quickstart.py").Content -}}
+{{- range $i, $p := (slice .) | append .RegularPages.ByWeight -}}
+{{- $c := $p.RawContent -}}
+{{- $c = replaceRE `(?m)^[ \t]*\{\{<\s*/?qs-tabs[^>]*>\}\}[ \t]*$` "" $c -}}
+{{- $c = replaceRE `(?m)^[ \t]*\{\{%\s*/qs-tab\s*%\}\}[ \t]*$` "" $c -}}
+{{- $c = replaceRE `\{\{%\s*qs-tab\s+name="([^"]+)"\s*%\}\}` "### ${1}\n" $c -}}
+{{- $c = replaceRE `(?m)^[ \t]*\{\{%\s*/qs-note\s*%\}\}[ \t]*$` "" $c -}}
+{{- $c = replaceRE `\{\{%\s*qs-note[^%]*title="([^"]*)"[^%]*%\}\}` "**${1}**\n" $c -}}
+{{- $c = replaceRE `\{\{%\s*qs-note[^%]*%\}\}` "" $c -}}
+{{- $c = replaceRE `\{\{<\s*qs-snippet\s+lang="?node"?\s*>\}\}` "@@QS-NODE@@" $c -}}
+{{- $c = replaceRE `\{\{<\s*qs-snippet\s+lang="?python"?\s*>\}\}` "@@QS-PYTHON@@" $c -}}
+{{- $c = replaceRE "(?m)^([ \t]*`{3,}[A-Za-z0-9_+-]*)[ \t]*\\{[^}\n]*\\}[ \t]*$" "${1}" $c -}}
+{{- $c = replace $c "](/" (print "](" $base "/") -}}
+{{- $c = replaceRE `\n{3,}` "\n\n" $c -}}
+{{- /* tidy first, so the snippet files below go in byte for byte */ -}}
+{{- $c = replace $c "@@QS-NODE@@" (print "```js\n" $node "```\n") -}}
+{{- $c = replace $c "@@QS-PYTHON@@" (print "```python\n" $python "```\n") -}}
+# {{ $p.Title | safeHTML }}
+{{ if eq $i 0 }}
+> Unofficial community quickstart for Qrypt's Entropy-as-a-Service API. Docs shell © Qrypt, CC BY-NC-SA 4.0. Official docs: https://docs.qrypt.com/
+{{ end }}
+{{ $c | safeHTML }}
+
+{{ end -}}

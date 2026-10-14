@@ -60,6 +60,24 @@ git config core.hooksPath .githooks
 
 Run it by hand with `scripts/ci_checks.sh local`, or run `scripts/ci_checks.sh matrix` to repeat the CI test matrix (Python 3.10/3.13, Node 20.12/22/24) in the exact Docker images. Skip the hook for one push with `git push --no-verify`.
 
+## Building the site
+
+The quickstart site is a Hugo project in `site/` that sits inside a copy of the Qrypt docs shell (the `site/upstream` submodule). Fetch the submodule once, then build:
+
+```sh
+git submodule update --init --recursive
+python3 scripts/build_site.py
+```
+
+The output is `site/public/`. The script downloads a pinned Hugo into `.tools/` on first use. To preview, build for a local address and serve the folder, then open <http://localhost:8000/quickstart/>:
+
+```sh
+python3 scripts/build_site.py --base-url http://localhost:8000/
+python3 -m http.server -d site/public 8000
+```
+
+`scripts/ci_checks.sh site` builds the site and runs its tests, including the documented shell commands (they need Node.js and network access for `pip`). The plain `pytest` run also includes those tests; skip them with `pytest -m "not site and not docs"`. `scripts/ci_checks.sh docs-pwsh` checks the Windows PowerShell commands in a Docker image.
+
 ## Repository layout
 
 ```

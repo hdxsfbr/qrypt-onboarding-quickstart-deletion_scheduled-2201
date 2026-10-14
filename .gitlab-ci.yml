@@ -1,9 +1,11 @@
 # GitLab CI (the repo lives on labs.gauntletai.com; runner: agentforge-ci-runner, Docker executor,
 # untagged jobs). Four stages:
 #   lint    — LOC and line-width limits, syntax checks, pinned requirements
-#   test    — pytest against the mock server: Python 3.10 and 3.13, Node 20.12, 22 and 24
+#   test    — pytest against the mock server: Python 3.10 and 3.13, Node 20.12, 22 and 24; and the
+#             site job: Hugo build, built-site checks, documented commands (artifact: site/public)
 #   secrets — gitleaks over the full git history
-#   deploy  — on the default branch only, after everything else passes: Cloudflare Pages
+#   deploy  — on the default branch only, after everything else passes: the site job's
+#             site/public artifact goes to Cloudflare Pages
 # No job needs a Qrypt key: the tests build their own sanitized environment and talk to the mock.
 # Each job calls scripts/ci_checks.sh, the same script the pre-push hook runs locally.
 # Every image is pinned to an exact tag. Node 20.12.0 is the documented minimum, so it is tested
@@ -52,6 +54,39 @@ test-node:
   script:
     - PYTEST=.venv/bin/pytest scripts/ci_checks.sh test-node
 
+site:
+  stage: test
+  image: python:3.13.15-slim-bookworm
+  variables:
+    # site/upstream (the Qrypt docs shell) is a submodule with a theme submodule of its own.
+    GIT_SUBMODULE_STRATEGY: recursive
+    NODE_VERSION: 22.23.2
+    # From https://nodejs.org/dist/v22.23.2/SHASUMS256.txt (node-v22.23.2-linux-x64.tar.gz).
+    NODE_SHA256: b294a556e639d64338823920e5866c21c02741742d2e1529ee1a225c1ec9252a
+  cache:
+    key: 'site'
+    paths: ['.pip-cache/', '.tools/']
+  before_script:
+    # Python 3.13 comes from the image (pytest, pip and venv work out of the box, and the docs
+    # test builds its own venv). Node comes from the official tarball, checked against a pinned
+    # SHA-256: Debian's nodejs is 18, too old for the Node snippet (20.12+), and the node image
+    # would trade the pinned Python 3.13 for Debian's 3.11. git is for the submodule check,
+    # curl is what the documented commands use.
+    - apt-get update -qq
+    - apt-get install -y -qq --no-install-recommends git curl ca-certificates
+    - curl -fsSL -o /tmp/node.tar.gz "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz"
+    - echo "${NODE_SHA256}  /tmp/node.tar.gz" | sha256sum -c -
+    - tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 --no-same-owner
+    - rm /tmp/node.tar.gz
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - node --version
+    - pip install -r requirements-dev.txt
+  script:
+    - scripts/ci_checks.sh site
+  artifacts:
+    paths: ['site/public']
+    expire_in: 1 week
+
 secrets:
   stage: secrets
   image:
@@ -66,7 +101,8 @@ secrets:
 deploy:
   stage: deploy
   image: node:22.23.2-bookworm
-  needs: [lint, test-python, test-node, secrets]
+  # Needing `site` also downloads its artifact (site/public) into this job.
+  needs: [lint, test-python, test-node, site, secrets]
   # Cloudflare Pages (labs.gauntletai.com has no GitLab Pages). CLOUDFLARE_API_TOKEN and
   # CLOUDFLARE_ACCOUNT_ID are masked, protected project variables, so this only runs on main;
   # without the token the job is skipped rather than failed.
@@ -75,24 +111,7 @@ deploy:
   variables:
     WRANGLER_SEND_METRICS: 'false'
   script:
-    - mkdir -p public
-    - |
-      cat > public/index.html <<'HTML'
-      <!doctype html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Qrypt Quickstart</title>
-      </head>
-      <body>
-        <main>
-          <h1>Qrypt Quickstart</h1>
-          <p>Generate an AES-256 key from Qrypt quantum entropy with a short Node.js or Python script.</p>
-        </main>
-      </body>
-      </html>
-      HTML
+    - test -f site/public/index.html
     - >-
-      npx -y wrangler@4.144.0 pages deploy public --project-name qrypt-quickstart --branch main
+      npx -y wrangler@4.144.0 pages deploy site/public --project-name qrypt-quickstart --branch main
       --commit-hash "$CI_COMMIT_SHA" --commit-message "$CI_COMMIT_TITLE" </dev/null

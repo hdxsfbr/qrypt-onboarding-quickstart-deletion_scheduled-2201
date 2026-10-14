@@ -1,0 +1,5 @@
+{{- /* A child of qs-tabs: stores its name and rendered Markdown body on the parent. */ -}}
+{{- if not .Parent }}{{ errorf "qs-tab must be inside qs-tabs (%s)" .Position }}{{ end -}}
+{{- $name := trim (.Get "name") " " -}}
+{{- if not $name }}{{ errorf "qs-tab needs a name (%s)" .Position }}{{ end -}}
+{{- .Parent.Store.Add "tabs" (slice (dict "name" $name "body" .Inner)) -}}

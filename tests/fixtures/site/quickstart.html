@@ -1,0 +1,32 @@
+<!doctype html><html lang=en><head><meta charset=utf-8><title>Quickstart</title>
+<meta name=robots content=noindex>
+<link rel=canonical href=https://qrypt-quickstart.pages.dev/quickstart/>
+<link rel=stylesheet href=/css/theme.css?1700000000>
+<style>pre{white-space:pre-wrap}.sr{position:absolute}</style></head>
+<body><header><a href=/>Qrypt</a></header>
+<main><h1>Quickstart</h1>
+<p>About 5 minutes once you have a key. <a href=https://gitlab.example/docs/evidence/benchmarks.md>How we measured</a>.
+<h2 id=key>1. Get a key</h2>
+<div class=highlight><pre tabindex=0 style=background-color:#f7f7f7;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#6639ba>echo</span> <span style=color:#0a3069>&#34;QRYPT_API_KEY=paste-your-key-here&#34;</span> &gt; .env
+</span></span></code></pre><button type=button aria-label="Copy shell code">Copy</button></div>
+<h2 id=run>2. Run it</h2>
+<div class=qs-tabs>
+<div role=tablist aria-label=Language>
+<button role=tab id=tab-node aria-selected=true aria-controls=panel-node tabindex=0>Node.js</button>
+<button role=tab id=tab-python aria-selected=false aria-controls=panel-python tabindex=-1>Python</button></div>
+<div role=tabpanel id=panel-node aria-labelledby=tab-node><h3>Node.js</h3>
+<div class=highlight>@@NODE@@</div><button type=button aria-label="Copy Node.js code">Copy</button></div>
+<div role=tabpanel id=panel-python aria-labelledby=tab-python><h3>Python</h3>
+<div class=highlight>@@PYTHON@@</div><button type=button aria-label="Copy Python code">Copy</button></div>
+</div>
+<div class=sr aria-live=polite></div>
+<h2 id=gives>What this does and doesn&rsquo;t give you</h2>
+<p>The entropy travels over TLS. For keys that never cross the network, see the Qrypt SDK.
+<h2 id=portal>The portal showed you different sample code?</h2>
+<p>The portal sample uses the eaas-aws API. This quickstart uses api-eus.
+<h2 id=handling>Keep the key safe</h2>
+<p>Don't print, log or commit your key, and don't reuse entropy bytes.
+</main>
+<footer>Unofficial community quickstart. Docs shell &copy; Qrypt, CC BY-NC-SA 4.0. Official docs: <a href=https://docs.qrypt.com>docs.qrypt.com</a></footer>
+<script>var K="qs-lang";document.addEventListener("keydown",function(e){["ArrowLeft","ArrowRight","Home","End"].indexOf(e.key)});try{localStorage.setItem(K,"node")}catch(e){}</script>
+</body></html>
