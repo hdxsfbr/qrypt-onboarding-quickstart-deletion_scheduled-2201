@@ -5,6 +5,7 @@
 #   secrets — gitleaks over the full git history
 #   deploy  — on the default branch only, after everything else passes: GitLab Pages
 # No job needs a Qrypt key: the tests build their own sanitized environment and talk to the mock.
+# Each job calls scripts/ci_checks.sh, the same script the pre-push hook runs locally.
 # Every image is pinned to an exact tag. Node 20.12.0 is the documented minimum, so it is tested
 # exactly rather than through a floating 20.x tag.
 image: node:22.23.2-bookworm
@@ -23,19 +24,7 @@ lint:
   stage: lint
   # The Node image is Debian-based and ships python3, so one image covers both checkers.
   script:
-    - python3 scripts/loc.py quickstart/node/quickstart.mjs quickstart/python/quickstart.py --max 25 --max-width 100
-    - node --check quickstart/node/quickstart.mjs
-    - python3 -m py_compile quickstart/python/quickstart.py
-    # Exactly three requirements, each pinned with ==, ignoring blank and comment lines.
-    - |
-      awk '
-        /^[[:space:]]*(#|$)/ { next }
-        { n++ }
-        $0 !~ /^[A-Za-z0-9._-]+==[^=[:space:]]+$/ { print "not pinned with ==: " $0; bad++ }
-        END {
-          if (n != 3) { print "expected 3 requirements, found " n; bad++ }
-          exit bad ? 1 : 0
-        }' quickstart/python/requirements.txt
+    - scripts/ci_checks.sh lint
 
 test-python:
   stage: test
@@ -45,7 +34,7 @@ test-python:
       - PYTHON_VERSION: ['3.10.21', '3.13.15']
   script:
     - pip install -r requirements-dev.txt
-    - pytest -m "python or mock"
+    - scripts/ci_checks.sh test-python
 
 test-node:
   stage: test
@@ -61,7 +50,7 @@ test-node:
     - python3 -m venv .venv
     - .venv/bin/pip install -r requirements-dev.txt
   script:
-    - .venv/bin/pytest -m node
+    - PYTEST=.venv/bin/pytest scripts/ci_checks.sh test-node
 
 secrets:
   stage: secrets
@@ -72,7 +61,7 @@ secrets:
     GIT_DEPTH: 0
   script:
     # `gitleaks git` scans the commit history; --redact keeps matched values out of the job log.
-    - gitleaks git --redact --no-banner --verbose .
+    - scripts/ci_checks.sh secrets
 
 pages:
   stage: deploy

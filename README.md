@@ -50,6 +50,16 @@ pytest
 
 Node.js 20.12 or later must be on your `PATH` for the Node tests. Use `pytest -m python` or `pytest -m node` to run one language.
 
+### Same checks as CI, before every push
+
+`scripts/ci_checks.sh` is the single definition of the CI checks: every GitLab job calls it. Enable the pre-push hook once per clone, and a push that would fail CI fails locally first (about 10 seconds; the secret scan needs `gitleaks` or Docker):
+
+```sh
+git config core.hooksPath .githooks
+```
+
+Run it by hand with `scripts/ci_checks.sh local`, or run `scripts/ci_checks.sh matrix` to repeat the CI test matrix (Python 3.10/3.13, Node 20.12/22/24) in the exact Docker images. Skip the hook for one push with `git push --no-verify`.
+
 ## Repository layout
 
 ```

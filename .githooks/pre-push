@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs the same checks as GitLab CI before every push (see scripts/ci_checks.sh).
+# Skip once with: git push --no-verify
+exec "$(git rev-parse --show-toplevel)/scripts/ci_checks.sh" local
