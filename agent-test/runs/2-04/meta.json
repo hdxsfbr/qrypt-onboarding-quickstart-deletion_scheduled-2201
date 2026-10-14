@@ -1,0 +1,34 @@
+{
+ "run_id": "2-04",
+ "round": "2",
+ "model": "gemini-3.5-flash-lite",
+ "url": "https://wave-3.qrypt-quickstart.pages.dev/quickstart/",
+ "started_utc": "2026-10-14T22:03:00+00:00",
+ "timed_out": false,
+ "agent_exit": 0,
+ "wall_s": 30.9,
+ "env_existed": true,
+ "rerun": {
+  "attempted": true,
+  "entry": {
+   "argv": [
+    "node",
+    "quickstart.mjs"
+   ],
+   "cwd": "",
+   "source": "final-message"
+  },
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "\u2714 Generated a 256-bit AES key from Qrypt quantum entropy (AES-GCM round trip OK).\n",
+  "stderr": "",
+  "attempts": 1,
+  "mark": 39,
+  "wall_s": 1.1
+ },
+ "docker_error": null,
+ "agent_cmd": false,
+ "ended_utc": "2026-10-14T22:03:50+00:00",
+ "ledger_rows": 2,
+ "ledger_bytes": 2048
+}

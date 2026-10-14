@@ -1,0 +1,34 @@
+{
+ "run_id": "1-09",
+ "round": "1",
+ "model": "gemini-pro-latest",
+ "url": "https://qrypt-quickstart.pages.dev/quickstart/",
+ "started_utc": "2026-10-14T23:11:42+00:00",
+ "timed_out": false,
+ "agent_exit": 0,
+ "wall_s": 65.4,
+ "env_existed": false,
+ "rerun": {
+  "attempted": true,
+  "entry": {
+   "argv": [
+    "node",
+    "quickstart.mjs"
+   ],
+   "cwd": "qrypt-quickstart",
+   "source": "single-file"
+  },
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "\u2714 Generated a 256-bit AES key from Qrypt quantum entropy (AES-GCM round trip OK).\n",
+  "stderr": "",
+  "attempts": 1,
+  "mark": 20,
+  "wall_s": 1.1
+ },
+ "docker_error": null,
+ "agent_cmd": false,
+ "ended_utc": "2026-10-14T23:13:07+00:00",
+ "ledger_rows": 2,
+ "ledger_bytes": 2048
+}

@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": true,
+  "b": false,
+  "c": false,
+  "d": false,
+  "e": true,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "key-printed",
+ "notes": [
+  "rerun failed: exit 1, no fresh 200 from the entropy endpoint; entrypoint /work/.venv/bin/python quickstart.py (cwd /, from single-file); Qrypt key value appears in the transcript or program output; AES key printed: 2 string(s) match a recorded fingerprint; agent left no .env file"
+ ],
+ "harness_error": null
+}

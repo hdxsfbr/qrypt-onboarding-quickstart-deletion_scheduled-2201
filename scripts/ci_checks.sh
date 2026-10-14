@@ -10,6 +10,8 @@
 #                                       (needs python3, git, curl, node 20.12+, network for Hugo/pip)
 #   scripts/ci_checks.sh docs-pwsh      run the {test="pwsh"} doc blocks in the pinned PowerShell
 #                                       image and check the .env they write (needs docker)
+#   scripts/ci_checks.sh agent-harness  pytest agent-test/tests (agent-readiness harness; no Docker,
+#                                       no network, no live calls)
 #   scripts/ci_checks.sh local          all of the above but docs-pwsh, with the local runtimes,
 #                                       using .venv/
 #   scripts/ci_checks.sh matrix         the CI test matrix in its exact Docker images, one at a time
@@ -42,6 +44,7 @@ lint() {
 }
 
 test_python() { $PYTEST -q -m "python or mock"; }
+agent_harness() { $PYTEST -q agent-test/tests; }
 test_node() { $PYTEST -q -m node; }
 
 secrets() {
@@ -157,6 +160,7 @@ case "${1:-}" in
   lint) lint ;;
   test-python) test_python ;;
   test-node) test_node ;;
+  agent-harness) agent_harness ;;
   secrets) secrets ;;
   site) site ;;
   docs-pwsh) docs_pwsh ;;
@@ -168,9 +172,10 @@ case "${1:-}" in
     PYTEST=.venv/bin/pytest
     step test-python test_python
     step test-node test_node
+    step agent-harness agent_harness
     step site site
     step secrets secrets
     echo "all CI checks passed locally in $(( $(date +%s) - start ))s"
     ;;
-  *) sed -n '2,18p' "$0"; exit 2 ;;
+  *) sed -n '2,20p' "$0"; exit 2 ;;
 esac

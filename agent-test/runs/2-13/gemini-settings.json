@@ -1,0 +1,162 @@
+{
+ "general": {
+  "enableAutoUpdate": false,
+  "enableAutoUpdateNotification": false
+ },
+ "privacy": {
+  "usageStatisticsEnabled": false
+ },
+ "experimental": {
+  "enableAgents": false
+ },
+ "modelConfigs": {
+  "customAliases": {
+   "gemini-3-flash-base": {
+    "extends": "base",
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   "gemini-3.5-flash-base": {
+    "extends": "base",
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   "gemini-2.5-flash-base": {
+    "extends": "base",
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   "context-calibrator": {
+    "extends": "base",
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   }
+  },
+  "customOverrides": [
+   {
+    "match": {
+     "model": "classifier"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "prompt-completion"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "fast-ack-helper"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "edit-corrector"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "summarizer-default"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "summarizer-shell"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "loop-detection-double-check"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-3-pro"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-3-flash"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-3.1-flash-lite"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-2.5-pro"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-2.5-flash"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-2.5-flash-lite"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "chat-compression-default"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   },
+   {
+    "match": {
+     "model": "agent-history-provider-summarizer"
+    },
+    "modelConfig": {
+     "model": "gemini-pro-latest"
+    }
+   }
+  ]
+ }
+}

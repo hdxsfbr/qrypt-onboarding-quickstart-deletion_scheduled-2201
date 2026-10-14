@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/work/quickstart.py", line 11, in <module>
+    raise ValueError("QRYPT_API_KEY environment variable is not set.")
+ValueError: QRYPT_API_KEY environment variable is not set.

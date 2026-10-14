@@ -1,0 +1,11 @@
+.env.example
+.pytest_cache/.gitignore
+.pytest_cache/CACHEDIR.TAG
+.pytest_cache/README.md
+.pytest_cache/v/cache/nodeids
+README.md
+__pycache__/ (contents not listed)
+qrypt_aes.py
+requirements.txt
+test_qrypt_aes.py
+venv/ (contents not listed)
