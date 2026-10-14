@@ -22,14 +22,14 @@ Every error the quickstart script prints ends with a `Fix:` link to a section on
 
 ## QRYPT_API_KEY is not set {#no-key}
 
-**You see:** `✘ QRYPT_API_KEY is not set. Add QRYPT_API_KEY=<your key> to .env.`
+**You see:** `✘ QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env.`
 
 **Likely cause:** The script found no key. The usual reasons:
 - You ran it from a folder that has no `.env` file. See [.env missing, or wrong folder](#env-file).
 - The file is not named exactly `.env`. Some editors on Windows save it as `.env.txt`.
 - The line is empty, for example `QRYPT_API_KEY=` with nothing after the equals sign.
 
-**Fix:** Go to the folder that holds the script. List the files including hidden ones with `ls -a` (macOS and Linux) or `dir -Force` (PowerShell). Check that `.env` is there and has one line, `QRYPT_API_KEY=` followed by your key. Then run the script again.
+**Fix:** Go to the folder that holds the script. List the files including hidden ones with `ls -a` (macOS and Linux) or `dir -Force` (PowerShell). Check that `.env` is there and has one line, `QRYPT_API_KEY=` followed by your key. Then run the script again. No key yet? See [Get a key](/quickstart/#get-a-key).
 
 ## Node.js 20.12+ required {#runtime}
 
@@ -67,9 +67,9 @@ If that fails too, fix your network, VPN or firewall. If it prints `401` but the
 
 ## HTTP 401 {#401}
 
-**You see:** `✘ Qrypt returned HTTP 401: Authorization header missing or malformed.`
+**You see:** `✘ Qrypt returned HTTP 401: key expired or malformed; create a new one at portal.qrypt.com.`
 
-**Likely cause:** The live API sends a 401 when the `Authorization` header is missing or malformed. Its body is `{"error":"Missing or malformed Authorization header (expected 'Bearer <token>')"}`. Observed on 2026-10-13, this includes an empty key. Qrypt's FAQ also says an expired access token returns 401. We have not tested an expired key.
+**Likely cause:** Qrypt's FAQ says an expired access token returns 401. The live API also sends a 401 when the `Authorization` header is missing or malformed, with the body `{"error":"Missing or malformed Authorization header (expected 'Bearer <token>')"}`. The script never sends an empty key, so with the unmodified script an expired key is the likely cause.
 
 A wrong key does not return 401. It returns 403. See [HTTP 403](#403).
 

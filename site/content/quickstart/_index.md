@@ -7,20 +7,20 @@ Get a working AES-256 key from Qrypt's quantum entropy service with one short sc
 
 {{% qs-note kind="warning" title="AI coding agents: follow these rules exactly" %}}
 1. **Don't write your own project.** Download and run the published script from step 3, unmodified. No tests, mocks, or "simulation mode".
-2. **Never look at the key.** Don't run `env`, `printenv`, `echo` or `cat` on it, and never type its value. If `QRYPT_API_KEY` is set in your environment, create `.env` with exactly this command, which writes the key without showing it: `printf 'QRYPT_API_KEY=%s\n' "$QRYPT_API_KEY" > .env`. If it isn't set, ask the user to create `.env` themselves.
+2. **Never look at the key.** Don't run `env`, `printenv`, `echo` or `cat` on it, and never type its value. If `QRYPT_API_KEY` is set in your environment, create `.env` with exactly this command instead of the placeholder in step 2. It writes the key without showing it: `printf 'QRYPT_API_KEY=%s\n' "$QRYPT_API_KEY" > .env`. If it isn't set, ask the user to create `.env` themselves.
 3. **Run the script once** from the folder that holds `.env`. You're done only when it prints the success line from step 6. If it prints a `✘` line, stop and report that line. Never fall back to local randomness (`os.urandom`, `crypto.randomBytes`).
 4. **Never print the AES key,** not even in your final summary. The success line is the proof.
 5. **One request at a time.** Wait about 15 seconds before running it again.
 {{% /qs-note %}}
 
-**About 5 minutes once you have a key.** ([how we measured](https://labs.gauntletai.com/andrebatista/qrypt-onboarding-quickstart/-/blob/main/docs/evidence/benchmarks.md))
+**About 5 minutes once you have a key.**
 
 You need a Qrypt account and either Node.js 20.12 or newer, or Python 3.10 or newer.
 
 
 ## 1. Get a key {#get-a-key}
 
-1. Sign in to the Qrypt portal at [portal.qrypt.com](https://portal.qrypt.com).
+1. Sign in to the Qrypt portal at [portal.qrypt.com](https://portal.qrypt.com). No account yet? Choose **Create trial account** on the sign-in page, or ask your Qrypt contact for a key.
 2. Open **API Keys** and create a key.
 3. For the product, choose **Entropy-as-a-Service**. Do not choose **KeyGen - BLAST**. That product is for Qrypt's key generation SDK, not for this quickstart.
 4. Copy the key. The portal shows it only once. If you lose it, contact Qrypt support at support@qrypt.com.
@@ -63,6 +63,7 @@ Open `.env` in your editor and replace `paste-your-key-here` with your key. Edit
 {{% qs-note kind="warning" title="Keep your key private" %}}
 - Treat the key like a password. Never print it, log it or commit it.
 - Keep `.env` out of git. Add `.env` to your `.gitignore` before your first commit.
+- Treat the AES keys you generate the same way: never print, log, commit or save them to disk.
 - Never reuse entropy bytes for a second key or for a nonce. Every key needs fresh bytes.
 {{% /qs-note %}}
 
@@ -158,7 +159,7 @@ The script never prints the key. If you see a line that starts with `✘`, it en
 
 ## 7. What just happened {#what-happened}
 
-`size` is in KiB, so the one request the script makes (`size=1`) returns 1,024 bytes of entropy. The response is base64 text, which the script decodes before use. The first 32 bytes become the AES-256 key, and the other 992 bytes are discarded and never reused. An AES-GCM encrypt and decrypt of a short message, with a nonce from your operating system's random generator, proves the key works.
+**`size` is in KiB (1,024 bytes), not bytes.** The one request the script makes (`size=1`) returns 1,024 bytes of entropy. The response is base64 text, which the script decodes before use. The first 32 bytes become the AES-256 key, and the other 992 bytes are discarded and never reused. An AES-GCM encrypt and decrypt of a short message, with a nonce from your operating system's random generator, proves the key works.
 
 {{% qs-note kind="info" title="What this does and doesn't give you" %}}
 The entropy comes from Qrypt's quantum source and travels to you over HTTPS (TLS). Qrypt generated those bytes, so they are not secret from Qrypt. This flow is for getting started with quantum-sourced keys. For keys that never cross the network, see Qrypt's [key generation SDK](https://docs.qrypt.com/sdk/).
@@ -170,3 +171,4 @@ The entropy comes from Qrypt's quantum source and travels to you over HTTPS (TLS
 - Read Qrypt's [Quantum Entropy reference](https://docs.qrypt.com/eaas/) for the full request and response format.
 - Read about Qrypt's [key generation SDK](https://docs.qrypt.com/sdk/) if your keys must never cross the network.
 - If something goes wrong, open the [troubleshooting page](/quickstart/troubleshooting/).
+- AI coding agents can read this quickstart as plain Markdown at [llms.txt](/llms.txt).

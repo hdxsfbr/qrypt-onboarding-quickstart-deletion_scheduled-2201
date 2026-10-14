@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from dotenv import load_dotenv
 
 HELP = "https://qrypt-quickstart.pages.dev/quickstart/troubleshooting/"
-HINTS = {401: "Authorization header missing or malformed",
+HINTS = {401: "key expired or malformed; create a new one at portal.qrypt.com",
          403: "key rejected, or monthly entropy quota used up",
          429: "rate limit reached; wait about 15 seconds, then run once"}
 
@@ -24,7 +24,7 @@ def fail(msg, anchor):
 load_dotenv()
 token = os.getenv("QRYPT_API_KEY", "").strip()
 if not token:
-    fail("QRYPT_API_KEY is not set. Add QRYPT_API_KEY=<your key> to .env.", "no-key")
+    fail("QRYPT_API_KEY is not set. Add your key from portal.qrypt.com to .env.", "no-key")
 
 url = os.getenv("QRYPT_API_URL", "https://api-eus.qrypt.com/api/v1/quantum-entropy?size=1")
 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}",

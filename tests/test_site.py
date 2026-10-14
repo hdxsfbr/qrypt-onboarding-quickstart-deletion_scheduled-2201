@@ -703,14 +703,12 @@ def check_content_blocks(public):
                                                    r"\bentropy\b[^.]{0,60}\breus\w*\b|"
                                                    r"\breus\w*\b[^.]{0,30}\bbytes\b")):
         assert re.search(pattern, body), f"key-handling warning is missing: {label}"
-    # W10: stated once, near the top (before the first code block), with a link to the benchmark.
+    # W10: stated once, near the top (before the first code block).
     time_line = "About 5 minutes once you have a key."
     assert body.count(time_line.lower()) == 1, f"{time_line!r} must appear exactly once"
     first_pre = next(n for n in page.walk() if is_pre(n))
     before = squash("".join(_text_before(page, first_pre))).lower()
     assert time_line.lower() in before, "the time target must come before the first code block"
-    assert any("benchmarks.md" in a.attrs.get("href", "") for a in find(page, "a")), \
-        "the time target must link to docs/evidence/benchmarks.md"
     texts = {rel: squash(load(public, rel).text()) for rel in OUR_PAGES}
     for rel in ("llms.txt", "quickstart/index.md"):
         if (public / rel).is_file():
@@ -893,7 +891,6 @@ def build_fixture(dest, **break_it):
         "no_footer": ("Unofficial community quickstart.", "Community quickstart."),
         "banned": ("Keep the key safe", "An unbreakable key"),
         "no_tls": ("TLS", "HTTPS"),
-        "no_benchmark_link": ("benchmarks.md", "results.html"),
     }.items():
         if break_it.get(needle):
             assert repl[0] in page, f"fixture template lacks {repl[0]!r}"
@@ -966,7 +963,6 @@ BREAKS = [
     (check_code_contrast, "black_on_black_token", "background (0, 0, 0)"),
     (check_content_blocks, "banned", "banned"),
     (check_content_blocks, "no_tls", "TLS"),
-    (check_content_blocks, "no_benchmark_link", "benchmarks.md"),
     (check_llms_txt, "llms_edit", "verbatim"),
 ]
 
