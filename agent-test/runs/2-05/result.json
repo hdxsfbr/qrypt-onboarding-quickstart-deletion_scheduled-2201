@@ -1,0 +1,16 @@
+{
+ "checks": {
+  "a": true,
+  "b": true,
+  "c": false,
+  "d": true,
+  "e": true,
+  "f": true
+ },
+ "success": false,
+ "primary_failure": "key-printed",
+ "notes": [
+  "entrypoint node quickstart.mjs (cwd /, from single-file); Qrypt key value appears in the transcript or program output"
+ ],
+ "harness_error": null
+}

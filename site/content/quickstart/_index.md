@@ -5,17 +5,18 @@ weight = -10
 
 Get a working AES-256 key from Qrypt's quantum entropy service with one short script, in Node.js or Python. The script requests 1 KiB of entropy from Qrypt, uses the first 32 bytes as the key, and checks that the key works.
 
+{{% qs-note kind="warning" title="AI coding agents: follow these rules exactly" %}}
+1. **Don't write your own project.** Download and run the published script from step 3, unmodified. No tests, mocks, or "simulation mode".
+2. **Never look at the key.** Don't run `env`, `printenv`, `echo` or `cat` on it, and never type its value. If `QRYPT_API_KEY` is set in your environment, create `.env` with exactly this command, which writes the key without showing it: `printf 'QRYPT_API_KEY=%s\n' "$QRYPT_API_KEY" > .env`. If it isn't set, ask the user to create `.env` themselves.
+3. **Run the script once** from the folder that holds `.env`. You're done only when it prints the success line from step 6. If it prints a `✘` line, stop and report that line. Never fall back to local randomness (`os.urandom`, `crypto.randomBytes`).
+4. **Never print the AES key,** not even in your final summary. The success line is the proof.
+5. **One request at a time.** Wait about 15 seconds before running it again.
+{{% /qs-note %}}
+
 **About 5 minutes once you have a key.** ([how we measured](https://labs.gauntletai.com/andrebatista/qrypt-onboarding-quickstart/-/blob/main/docs/evidence/benchmarks.md))
 
 You need a Qrypt account and either Node.js 20.12 or newer, or Python 3.10 or newer.
 
-{{% qs-note kind="warning" title="Using an AI coding agent? Give it these rules" %}}
-- **Use the key you were given.** If `QRYPT_API_KEY` is already set in the environment, write it into `.env` without printing it: `printf 'QRYPT_API_KEY=%s\n' "$QRYPT_API_KEY" > .env`. Otherwise ask the user for a key.
-- **Run the downloaded script as-is, once,** from the folder that holds `.env`. The task is done only when it prints the success line in step 6. A project that was never run against Qrypt is not done.
-- **Never substitute local randomness** (`os.urandom`, `crypto.randomBytes`, mocks or a "simulation mode") for Qrypt entropy. If the script prints a `✘` line, stop and report that line.
-- **Never print the key,** not even in your final summary. The success line is the proof.
-- **One request at a time.** Wait about 15 seconds before running the script again.
-{{% /qs-note %}}
 
 ## 1. Get a key {#get-a-key}
 
